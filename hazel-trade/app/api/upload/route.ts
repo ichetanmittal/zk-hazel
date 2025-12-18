@@ -15,6 +15,7 @@ export async function POST(request: Request) {
     const dealId = formData.get('dealId') as string
     const documentType = formData.get('documentType') as string
     const folder = formData.get('folder') as string
+    const stepNumber = formData.get('stepNumber') as string
 
     if (!file || !dealId || !documentType || !folder) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -71,11 +72,12 @@ export async function POST(request: Request) {
         file_path: filePath,
         file_url: publicUrl,
         file_size: file.size,
-        mime_type: file.type,
+        file_type: file.type,
         document_type: documentType,
         folder: folder,
         uploaded_by: user.id,
         zk_verified: false,
+        step_number: stepNumber ? parseInt(stepNumber) : null,
       } as any)
       .select()
       .single()

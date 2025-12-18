@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, Upload } from 'lucide-react'
 import { DEAL_STEPS } from '@/lib/utils/constants'
+import StepDocumentUpload from '@/components/deals/step-document-upload'
 
 export default async function StepDetailPage({
   params,
@@ -178,53 +179,11 @@ export default async function StepDetailPage({
             </CardContent>
           </Card>
 
-          {/* Documents */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Documents</CardTitle>
-                <Button variant="outline" size="sm">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
-                </Button>
-              </div>
-              <CardDescription>
-                Documents related to this step
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {stepDocuments && stepDocuments.length > 0 ? (
-                <div className="space-y-2">
-                  {stepDocuments.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium text-sm">{doc.filename}</p>
-                          <p className="text-xs text-slate-500">
-                            {new Date(doc.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      {doc.zk_verified && (
-                        <Badge variant="default" style={{ backgroundColor: 'rgb(220 252 231)', color: 'rgb(21 128 61)' }} className="text-xs">
-                           Verified
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileText className="w-12 h-12 mx-auto text-slate-300 mb-2" />
-                  <p className="text-sm text-slate-500">No documents uploaded yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <StepDocumentUpload
+            dealId={id}
+            stepNumber={stepNumber}
+            documents={stepDocuments}
+          />
 
           {/* Activity Log */}
           <Card>
