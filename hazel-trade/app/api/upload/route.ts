@@ -113,6 +113,94 @@ export async function POST(request: Request) {
         console.log(`✓ Set ${verificationField} = true for deal ${dealId}`)
       }
 
+      // AUTO-COMPLETE STEP: If this is a step document, automatically complete the step
+      if (stepNumber && parseInt(stepNumber) > 0) {
+        const currentStepNumber = parseInt(stepNumber)
+
+        // Get deal to check current_step
+        const { data: deal } = await (supabaseClient as any)
+          .from('deals')
+          .select('current_step, status')
+          .eq('id', dealId)
+          .single()
+
+        // Only auto-complete if this is the current step
+        if (deal && deal.current_step === currentStepNumber) {
+          console.log(`✓ Auto-completing Step ${currentStepNumber} after document upload`)
+
+          // Mark current step as completed
+          await (supabaseClient as any)
+            .from('deal_steps')
+            .update({
+              status: 'COMPLETED',
+              completed_at: new Date().toISOString(),
+              completed_by: user.id,
+            })
+            .eq('deal_id', dealId)
+            .eq('step_number', currentStepNumber)
+
+          // Advance to next step
+          const newStep = Math.min(currentStepNumber + 1, 12)
+
+          await (supabaseClient as any)
+            .from('deals')
+            .update({
+              current_step: newStep,
+              status: newStep > 12 ? 'COMPLETED' : 'IN_PROGRESS',
+            })
+            .eq('id', dealId)
+
+          // Mark next step as IN_PROGRESS
+          if (newStep <= 12) {
+            await (supabaseClient as any)
+              .from('deal_steps')
+              .update({
+                status: 'IN_PROGRESS',
+                started_at: new Date().toISOString(),
+              })
+              .eq('deal_id', dealId)
+              .eq('step_number', newStep)
+          }
+
+          console.log(`✓ Advanced to Step ${newStep}`)
+
+          // Create step completion notification
+          const { data: dealData } = await (supabaseClient as any)
+            .from('deals')
+            .select(`
+              *,
+              buyer:companies!buyer_id(id),
+              seller:companies!seller_id(id)
+            `)
+            .eq('id', dealId)
+            .single()
+
+          if (dealData) {
+            // Get all users associated with this deal
+            const { data: users } = await (supabaseClient as any)
+              .from('users')
+              .select('id')
+              .or(
+                `company_id.eq.${dealData.buyer?.id},company_id.eq.${dealData.seller?.id},id.eq.${dealData.broker_id}`
+              )
+
+            if (users) {
+              const notifications = users.map((u: any) => ({
+                user_id: u.id,
+                deal_id: dealId,
+                type: 'STEP_COMPLETED',
+                title: `Step ${currentStepNumber} Completed`,
+                message: `Step ${currentStepNumber} has been automatically completed after document upload.`,
+                action_url: `/dashboard/deals/${dealId}`,
+                read: false,
+              }))
+
+              await (supabaseClient as any).from('notifications').insert(notifications)
+            }
+          }
+        }
+      }
+
       // Create notification
       await (supabaseClient as any).from('notifications').insert({
         user_id: user.id,
