@@ -64,16 +64,19 @@ export async function POST(
       // Move to next step
       const newStep = Math.min(stepNumber + 1, 12)
 
+      // If we just completed step 12, mark deal as COMPLETED
+      const dealStatus = stepNumber === 12 ? 'COMPLETED' : 'IN_PROGRESS'
+
       await supabase
         .from('deals')
         .update({
           current_step: newStep,
-          status: newStep === 12 ? 'COMPLETED' : 'IN_PROGRESS',
+          status: dealStatus,
         })
         .eq('id', dealId)
 
-      // Mark next step as IN_PROGRESS
-      if (newStep <= 12) {
+      // Mark next step as IN_PROGRESS (only if we haven't completed the last step)
+      if (stepNumber < 12) {
         await supabase
           .from('deal_steps')
           .update({
