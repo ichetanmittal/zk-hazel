@@ -277,34 +277,6 @@ export default async function StepDetailPage({
               )}
             </CardContent>
           </Card>
-
-          {/* Navigation */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Navigation</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {stepNumber > 1 && (
-                <Link href={`/dashboard/deals/${id}/steps/${stepNumber - 1}`}>
-                  <Button variant="outline" className="w-full justify-start" size="sm">
-                    � Previous Step
-                  </Button>
-                </Link>
-              )}
-              {stepNumber < 12 && (
-                <Link href={`/dashboard/deals/${id}/steps/${stepNumber + 1}`}>
-                  <Button variant="outline" className="w-full justify-start" size="sm">
-                    Next Step �
-                  </Button>
-                </Link>
-              )}
-              <Link href={`/dashboard/deals/${id}`}>
-                <Button variant="ghost" className="w-full justify-start" size="sm">
-                  View All Steps
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
