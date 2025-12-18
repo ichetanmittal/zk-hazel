@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { FileText, Lock, Folder, Upload } from 'lucide-react'
 
-export default async function DataRoomPage({ searchParams }: { searchParams: { deal?: string } }) {
+export default async function DataRoomPage({ searchParams }: { searchParams: Promise<{ deal?: string }> }) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,19 +14,97 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
     redirect('/auth/login')
   }
 
-  const dealId = searchParams.deal
+  const params = await searchParams
+  const dealId = params.deal
 
+  // Get user details
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role, company_id')
+    .eq('id', user.id)
+    .single()
+
+  const userRole = (userData as any)?.role
+
+  // If no deal selected, show deal selector
   if (!dealId) {
+    // Get user's deals
+    let dealsQuery = supabase
+      .from('deals')
+      .select('*, buyer:companies!buyer_id(name), seller:companies!seller_id(name)')
+
+    if (userRole === 'BROKER') {
+      dealsQuery = dealsQuery.eq('broker_id', user.id)
+    } else if (userRole === 'BUYER') {
+      dealsQuery = dealsQuery.eq('buyer_id', (userData as any).company_id)
+    } else if (userRole === 'SELLER') {
+      dealsQuery = dealsQuery.eq('seller_id', (userData as any).company_id)
+    }
+
+    const { data: deals } = await dealsQuery.order('created_at', { ascending: false })
+
+    // If only one deal, redirect to it automatically
+    if (deals && deals.length === 1) {
+      redirect(`/dashboard/data-room?deal=${deals[0].id}`)
+    }
+
     return (
       <div className="p-8">
         <h1 className="text-3xl font-bold mb-8">Data Room</h1>
-        <Card>
-          <CardContent className="p-12 text-center">
-            <p className="text-slate-600 dark:text-slate-400">
+        {deals && deals.length > 0 ? (
+          <>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
               Select a deal to view its data room
             </p>
-          </CardContent>
-        </Card>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {deals.map((deal: any) => (
+                <a key={deal.id} href={`/dashboard/data-room?deal=${deal.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                    <CardHeader>
+                      <div className="flex items-center justify-between mb-2">
+                        <CardTitle className="text-lg">{deal.deal_number}</CardTitle>
+                        <Badge
+                          variant={
+                            deal.status === 'MATCHED' || deal.status === 'IN_PROGRESS'
+                              ? 'default'
+                              : 'secondary'
+                          }
+                        >
+                          {deal.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      <CardDescription>
+                        {deal.quantity.toLocaleString()} {deal.quantity_unit} {deal.product_type.replace('_', ' ')}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm text-slate-600 dark:text-slate-400">
+                        <p>📍 {deal.location}</p>
+                        <p className="mt-1">💰 ${deal.estimated_value.toLocaleString()}</p>
+                        <div className="flex gap-2 mt-2">
+                          {deal.buyer_verified && (
+                            <Badge variant="outline" className="text-xs">✓ Buyer</Badge>
+                          )}
+                          {deal.seller_verified && (
+                            <Badge variant="outline" className="text-xs">✓ Seller</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </a>
+              ))}
+            </div>
+          </>
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <p className="text-slate-600 dark:text-slate-400">
+                No deals found
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     )
   }
@@ -43,15 +121,6 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
   }
 
   const currentDeal: any = deal
-
-  // Get user role for document visibility
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  const userRole = (userData as any)?.role
 
   // Get documents for this deal
   const { data: documents } = await supabase
