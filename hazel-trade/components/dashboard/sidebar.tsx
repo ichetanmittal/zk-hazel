@@ -35,19 +35,19 @@ export default function DashboardSidebar({ user }: SidebarProps) {
   const navItems = {
     BROKER: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/dashboard/deals', label: 'All Deals', icon: FileText, badge: 12 },
+      { href: '/dashboard/deals', label: 'All Deals', icon: FileText },
       { href: '/dashboard/deals/new', label: 'New Deal', icon: PlusCircle },
       { href: '/dashboard/parties', label: 'Parties', icon: Users },
     ],
     BUYER: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/dashboard/deals', label: 'My Deals', icon: FileText, badge: 2 },
+      { href: '/dashboard/deals', label: 'My Deals', icon: FileText },
       { href: '/dashboard/data-room', label: 'Data Room', icon: Folder },
       { href: '/dashboard/documents', label: 'Documents', icon: FileText },
     ],
     SELLER: [
       { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { href: '/dashboard/deals', label: 'My Deals', icon: FileText, badge: 2 },
+      { href: '/dashboard/deals', label: 'My Deals', icon: FileText },
       { href: '/dashboard/data-room', label: 'Data Room', icon: Folder },
       { href: '/dashboard/documents', label: 'Documents', icon: FileText },
     ],
@@ -121,9 +121,6 @@ export default function DashboardSidebar({ user }: SidebarProps) {
             >
               <Bell className="w-5 h-5" />
               <span className="flex-1">Notifications</span>
-              <Badge variant="destructive" className="text-xs">
-                3
-              </Badge>
             </div>
           </Link>
           <Link href="/dashboard/settings">
