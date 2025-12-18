@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import WorkflowTrackerWrapper from '@/components/deals/workflow-tracker-wrapper'
 import { ArrowLeft, FileText } from 'lucide-react'
 
-export default async function DealDetailPage({ params }: { params: { id: string } }) {
+export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,7 +26,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       seller:companies!seller_id(name),
       broker:users!broker_id(full_name)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!deal) {

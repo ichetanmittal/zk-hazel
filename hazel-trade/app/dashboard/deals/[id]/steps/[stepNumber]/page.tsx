@@ -10,8 +10,9 @@ import { DEAL_STEPS } from '@/lib/utils/constants'
 export default async function StepDetailPage({
   params,
 }: {
-  params: { id: string; stepNumber: string }
+  params: Promise<{ id: string; stepNumber: string }>
 }) {
+  const { id, stepNumber: stepNumberStr } = await params
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -20,7 +21,7 @@ export default async function StepDetailPage({
     redirect('/auth/login')
   }
 
-  const stepNumber = parseInt(params.stepNumber)
+  const stepNumber = parseInt(stepNumberStr)
 
   // Get deal details
   const { data: deal } = await supabase
@@ -31,7 +32,7 @@ export default async function StepDetailPage({
       seller:companies!seller_id(name),
       broker:users!broker_id(full_name)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!deal) {
@@ -42,7 +43,7 @@ export default async function StepDetailPage({
   const { data: step } = await supabase
     .from('deal_steps')
     .select('*')
-    .eq('deal_id', params.id)
+    .eq('deal_id', id)
     .eq('step_number', stepNumber)
     .single()
 
@@ -54,7 +55,7 @@ export default async function StepDetailPage({
   const { data: documents } = await supabase
     .from('documents')
     .select('*')
-    .eq('deal_id', params.id)
+    .eq('deal_id', id)
     .order('created_at', { ascending: false })
 
   const stepInfo = DEAL_STEPS.find(s => s.number === stepNumber)
@@ -91,7 +92,7 @@ export default async function StepDetailPage({
     <div className="p-8">
       {/* Header */}
       <div className="mb-6">
-        <Link href={`/dashboard/deals/${params.id}`}>
+        <Link href={`/dashboard/deals/${id}`}>
           <Button variant="ghost" size="sm" className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Deal
@@ -318,20 +319,20 @@ export default async function StepDetailPage({
             </CardHeader>
             <CardContent className="space-y-2">
               {stepNumber > 1 && (
-                <Link href={`/dashboard/deals/${params.id}/steps/${stepNumber - 1}`}>
+                <Link href={`/dashboard/deals/${id}/steps/${stepNumber - 1}`}>
                   <Button variant="outline" className="w-full justify-start" size="sm">
-                    ê Previous Step
+                    ÔøΩ Previous Step
                   </Button>
                 </Link>
               )}
               {stepNumber < 12 && (
-                <Link href={`/dashboard/deals/${params.id}/steps/${stepNumber + 1}`}>
+                <Link href={`/dashboard/deals/${id}/steps/${stepNumber + 1}`}>
                   <Button variant="outline" className="w-full justify-start" size="sm">
-                    Next Step í
+                    Next Step ÔøΩ
                   </Button>
                 </Link>
               )}
-              <Link href={`/dashboard/deals/${params.id}`}>
+              <Link href={`/dashboard/deals/${id}`}>
                 <Button variant="ghost" className="w-full justify-start" size="sm">
                   View All Steps
                 </Button>
