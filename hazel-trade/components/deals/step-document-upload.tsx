@@ -157,7 +157,7 @@ export default function StepDocumentUpload({ dealId, stepNumber, documents }: St
                   <div>
                     <p className="font-medium text-sm">{doc.filename}</p>
                     <p className="text-xs text-slate-500">
-                      {new Date(doc.created_at).toLocaleDateString()}
+                      {new Date(doc.created_at).toISOString().split('T')[0]}
                     </p>
                   </div>
                 </div>

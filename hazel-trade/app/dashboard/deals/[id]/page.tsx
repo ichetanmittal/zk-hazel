@@ -157,14 +157,14 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               <div>
                 <p className="text-slate-600 dark:text-slate-400">Created</p>
                 <p className="font-medium">
-                  {new Date(currentDeal.created_at).toLocaleDateString()}
+                  {new Date(currentDeal.created_at).toISOString().split('T')[0]}
                 </p>
               </div>
               {currentDeal.matched_at && (
                 <div>
                   <p className="text-slate-600 dark:text-slate-400">Matched</p>
                   <p className="font-medium">
-                    {new Date(currentDeal.matched_at).toLocaleDateString()}
+                    {new Date(currentDeal.matched_at).toISOString().split('T')[0]}
                   </p>
                 </div>
               )}

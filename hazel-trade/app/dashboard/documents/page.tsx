@@ -158,7 +158,7 @@ export default async function DocumentsPage() {
                       </td>
                       <td className="p-4">
                         <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {new Date(doc.created_at).toLocaleDateString()}
+                          {new Date(doc.created_at).toISOString().split('T')[0]}
                         </span>
                       </td>
                       <td className="p-4">

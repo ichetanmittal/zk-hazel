@@ -241,7 +241,7 @@ export default async function StepDetailPage({
                     Started
                   </p>
                   <p className="font-medium text-sm">
-                    {new Date(currentStep.started_at).toLocaleDateString()}
+                    {new Date(currentStep.started_at).toISOString().split('T')[0]}
                   </p>
                 </div>
               )}
@@ -252,7 +252,7 @@ export default async function StepDetailPage({
                     Completed
                   </p>
                   <p className="font-medium text-sm">
-                    {new Date(currentStep.completed_at).toLocaleDateString()}
+                    {new Date(currentStep.completed_at).toISOString().split('T')[0]}
                   </p>
                 </div>
               )}

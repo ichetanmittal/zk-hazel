@@ -112,7 +112,7 @@ export default async function DealsPage() {
                         )}
                       </div>
                       <p className="text-xs text-slate-500">
-                        Created {new Date(deal.created_at).toLocaleDateString()}
+                        Created {new Date(deal.created_at).toISOString().split('T')[0]}
                       </p>
                     </div>
                   </div>
