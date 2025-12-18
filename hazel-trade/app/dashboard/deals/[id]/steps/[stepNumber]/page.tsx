@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, CheckCircle, Clock, AlertCircle, FileText, Upload } from 'lucide-react'
 import { DEAL_STEPS } from '@/lib/utils/constants'
 import StepDocumentUpload from '@/components/deals/step-document-upload'
+import CompleteStepButton from '@/components/deals/complete-step-button'
 
 export default async function StepDetailPage({
   params,
@@ -119,10 +120,11 @@ export default async function StepDetailPage({
           </div>
           <div className="flex gap-2">
             {currentStep.status === 'IN_PROGRESS' && (
-              <Button>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Mark Complete
-              </Button>
+              <CompleteStepButton
+                dealId={id}
+                stepNumber={stepNumber}
+                stepName={stepInfo?.name || ''}
+              />
             )}
           </div>
         </div>

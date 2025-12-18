@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         deal_number: dealNumber,
         ...dealData,
         broker_id: user.id,
-        status: 'DRAFT',
+        status: 'PENDING_VERIFICATION',
         current_step: 1,
       })
       .select()

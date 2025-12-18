@@ -16,6 +16,8 @@ export async function POST(request: Request) {
     const documentType = formData.get('documentType') as string
     const folder = formData.get('folder') as string
     const stepNumber = formData.get('stepNumber') as string
+    const companyId = formData.get('companyId') as string
+    const userRole = formData.get('userRole') as string
 
     if (!file || !dealId || !documentType || !folder) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -96,16 +98,29 @@ export async function POST(request: Request) {
       const supabaseClient = await createClient()
       await (supabaseClient as any)
         .from('documents')
-        .update({ zk_verified: true, verified_at: new Date().toISOString() })
+        .update({ verification_status: 'VERIFIED', verified_at: new Date().toISOString() })
         .eq('id', createdDocument.id)
+
+      // If this is a POF or POP document, update the deal verification status
+      if (folder === 'POF' || folder === 'POP') {
+        const verificationField = folder === 'POF' ? 'buyer_verified' : 'seller_verified'
+
+        await (supabaseClient as any)
+          .from('deals')
+          .update({ [verificationField]: true })
+          .eq('id', dealId)
+
+        console.log(`✓ Set ${verificationField} = true for deal ${dealId}`)
+      }
 
       // Create notification
       await (supabaseClient as any).from('notifications').insert({
         user_id: user.id,
-        type: 'DOCUMENT_UPLOADED',
+        deal_id: dealId,
+        type: 'VERIFICATION_COMPLETE',
         title: 'Document Verified',
         message: `Your document "${file.name}" has been ZK verified successfully.`,
-        link: `/dashboard/data-room?deal=${dealId}`,
+        action_url: `/dashboard/deals/${dealId}`,
         read: false,
       })
     }, 3000)

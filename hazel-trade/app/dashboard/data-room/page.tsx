@@ -44,6 +44,15 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
 
   const currentDeal: any = deal
 
+  // Get user role for document visibility
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const userRole = (userData as any)?.role
+
   // Get documents for this deal
   const { data: documents } = await supabase
     .from('documents')
@@ -51,7 +60,19 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
     .eq('deal_id', dealId)
     .order('created_at', { ascending: false })
 
-  const dealDocuments: any[] = documents || []
+  const allDocuments: any[] = documents || []
+
+  // Filter documents based on role and visibility
+  const dealDocuments = allDocuments.filter((doc) => {
+    if (userRole === 'BROKER') {
+      return doc.visible_to_broker
+    } else if (userRole === 'BUYER') {
+      return doc.visible_to_buyer
+    } else if (userRole === 'SELLER') {
+      return doc.visible_to_seller
+    }
+    return false
+  })
 
   // Group documents by folder
   const folders = {
@@ -116,10 +137,22 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
                       {folder.docs.slice(0, 3).map((doc) => (
                         <div
                           key={doc.id}
-                          className="flex items-center gap-2 text-sm p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
+                          className="flex items-center justify-between gap-2 text-sm p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
-                          <FileText className="w-4 h-4 text-blue-500" />
-                          <span className="truncate">{doc.filename}</span>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <FileText className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            <span className="truncate">{doc.filename}</span>
+                          </div>
+                          <a
+                            href={doc.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 flex-shrink-0"
+                          >
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </a>
                         </div>
                       ))}
                       {folder.docs.length > 3 && (

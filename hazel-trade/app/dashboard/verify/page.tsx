@@ -1,25 +1,74 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import DocumentUpload from '@/components/deals/document-upload'
-import { CheckCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { CheckCircle, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import DocumentUploadForm from '@/components/deals/document-upload-form'
 
 export default function VerifyPage() {
   const router = useRouter()
+  const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<'BUYER' | 'SELLER' | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [pendingDeals, setPendingDeals] = useState<any[]>([])
   const [uploaded, setUploaded] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [verified, setVerified] = useState(false)
 
-  // This would normally check user role from session
-  const userRole = 'BUYER' // or 'SELLER'
+  useEffect(() => {
+    loadUserData()
+  }, [])
 
-  const handleUploadComplete = async (file: File, documentType: string) => {
+  const loadUserData = async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.push('/auth/login')
+        return
+      }
+
+      // Get user details
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role, company_id')
+        .eq('id', user.id)
+        .single()
+
+      if (userData) {
+        setUserRole(userData.role as 'BUYER' | 'SELLER')
+        setCompanyId(userData.company_id)
+
+        // Get pending deals for this company
+        const roleField = userData.role === 'BUYER' ? 'buyer_id' : 'seller_id'
+        const verifiedField = userData.role === 'BUYER' ? 'buyer_verified' : 'seller_verified'
+
+        const { data: deals } = await supabase
+          .from('deals')
+          .select('*')
+          .eq(roleField, userData.company_id)
+          .eq(verifiedField, false)
+          .in('status', ['DRAFT', 'PENDING_VERIFICATION'])
+
+        console.log('Found pending deals:', deals)
+        setPendingDeals(deals || [])
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUploadComplete = async (result: any) => {
     setUploaded(true)
     setVerifying(true)
 
-    // Simulate ZK verification
+    // Wait for ZK verification simulation
     setTimeout(() => {
       setVerifying(false)
       setVerified(true)
@@ -27,8 +76,17 @@ export default function VerifyPage() {
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {
         router.push('/dashboard')
+        router.refresh()
       }, 2000)
     }, 3000)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
   }
 
   if (verified) {
@@ -95,6 +153,28 @@ export default function VerifyPage() {
     )
   }
 
+  if (!pendingDeals || pendingDeals.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Pending Verification</CardTitle>
+            <CardDescription>
+              You don't have any deals pending verification
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/dashboard')} className="w-full">
+              Go to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const deal = pendingDeals[0]
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -103,7 +183,7 @@ export default function VerifyPage() {
             {userRole === 'BUYER' ? 'Upload Proof of Funds' : 'Upload Proof of Product'}
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Complete verification to access your deals
+            Complete verification to access deal {deal.deal_number}
           </p>
         </div>
 
@@ -117,8 +197,11 @@ export default function VerifyPage() {
           <p className="text-sm text-slate-600 text-center">Step 3 of 4</p>
         </div>
 
-        <DocumentUpload
+        <DocumentUploadForm
           type={userRole === 'BUYER' ? 'POF' : 'POP'}
+          dealId={deal.id}
+          companyId={companyId!}
+          userRole={userRole!}
           onUploadComplete={handleUploadComplete}
         />
       </div>

@@ -32,6 +32,9 @@ export default async function DashboardPage() {
 
   const role = userData?.role
 
+  console.log('Dashboard - User role:', role)
+  console.log('Dashboard - Company ID:', userData?.company_id)
+
   // Get deals based on role
   let dealsQuery = supabase
     .from('deals')
@@ -45,12 +48,18 @@ export default async function DashboardPage() {
     dealsQuery = dealsQuery.eq('seller_id', userData.company_id)
   }
 
-  const { data: deals } = await dealsQuery.limit(5).order('created_at', { ascending: false })
+  const { data: deals, error: dealsError } = await dealsQuery.limit(5).order('created_at', { ascending: false })
+
+  console.log('Dashboard - Found deals:', deals?.length || 0)
+  console.log('Dashboard - Deals data:', deals)
+  if (dealsError) console.error('Dashboard - Deals error:', dealsError)
 
   // Stats
   const activeDeals = deals?.filter(d => d.status === 'IN_PROGRESS' || d.status === 'MATCHED').length || 0
-  const pendingVerification = deals?.filter(d => d.status === 'PENDING_VERIFICATION').length || 0
+  const pendingVerification = deals?.filter(d => d.status === 'PENDING_VERIFICATION' || d.status === 'DRAFT').length || 0
   const completedDeals = deals?.filter(d => d.status === 'COMPLETED').length || 0
+
+  console.log('Dashboard - Stats:', { activeDeals, pendingVerification, completedDeals })
 
   return (
     <div className="p-8">
