@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { DEAL_STEPS } from '@/lib/utils/constants'
+import { sendInviteEmail } from '@/lib/email/send'
 
 export async function POST(request: Request) {
   try {
@@ -115,14 +116,54 @@ export async function POST(request: Request) {
       read: false,
     })
 
-    // TODO: Send email invites
+    // Get broker details for email
+    const { data: brokerData } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const buyerInviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${buyerToken}`
+    const sellerInviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${sellerToken}`
+
+    // Send email invites
+    const dealDetails = {
+      product: `${dealData.quantity} ${dealData.quantity_unit} ${dealData.product_type}`,
+      quantity: `${dealData.quantity} ${dealData.quantity_unit}`,
+      value: `$${dealData.estimated_value.toLocaleString()} ${dealData.currency || 'USD'}`,
+      location: dealData.location,
+    }
+
+    // Send buyer invite email
+    await sendInviteEmail({
+      to: buyerData.email,
+      companyName: buyerData.company,
+      contactName: buyerData.name,
+      role: 'BUYER',
+      dealNumber,
+      dealDetails,
+      inviteLink: buyerInviteLink,
+      brokerName: brokerData?.full_name || 'Your Broker',
+    })
+
+    // Send seller invite email
+    await sendInviteEmail({
+      to: sellerData.email,
+      companyName: sellerData.company,
+      contactName: sellerData.name,
+      role: 'SELLER',
+      dealNumber,
+      dealDetails,
+      inviteLink: sellerInviteLink,
+      brokerName: brokerData?.full_name || 'Your Broker',
+    })
 
     return NextResponse.json({
       success: true,
       deal,
       inviteLinks: {
-        buyer: `${process.env.NEXT_PUBLIC_APP_URL}/invite/${buyerToken}`,
-        seller: `${process.env.NEXT_PUBLIC_APP_URL}/invite/${sellerToken}`,
+        buyer: buyerInviteLink,
+        seller: sellerInviteLink,
       },
     })
   } catch (error: any) {
