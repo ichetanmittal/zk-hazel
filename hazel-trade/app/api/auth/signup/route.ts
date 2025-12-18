@@ -4,10 +4,26 @@ import { createServiceClient } from '@/lib/supabase/service'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, password, userData, companyData } = body
+    const { email, password, userData, companyData, inviteToken } = body
 
     // Use service role client for admin operations
     const supabase = createServiceClient()
+
+    // If there's an invite token, get the invite details
+    let invite = null
+    let dealId = null
+    if (inviteToken) {
+      const { data: inviteData } = await supabase
+        .from('invites')
+        .select('*, deals(*)')
+        .eq('token', inviteToken)
+        .single()
+
+      if (inviteData) {
+        invite = inviteData
+        dealId = inviteData.deal_id
+      }
+    }
 
     // Sign up user with Supabase Auth (using admin API to auto-confirm)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -76,6 +92,26 @@ export async function POST(request: Request) {
       await supabase.auth.admin.deleteUser(authData.user.id)
       await supabase.from('companies').delete().eq('id', company.id)
       throw new Error(`Failed to create user record: ${userError.message}`)
+    }
+
+    // If this is from an invite, link the company to the deal
+    if (invite && dealId) {
+      const role = invite.role
+      const updateField = role === 'BUYER' ? 'buyer_id' : 'seller_id'
+
+      // Update the deal with the company ID
+      await supabase
+        .from('deals')
+        .update({ [updateField]: company.id })
+        .eq('id', dealId)
+
+      // Mark invite as accepted
+      await supabase
+        .from('invites')
+        .update({ status: 'ACCEPTED' })
+        .eq('token', inviteToken)
+
+      console.log(`✓ Linked ${role} company to deal ${dealId}`)
     }
 
     return NextResponse.json({

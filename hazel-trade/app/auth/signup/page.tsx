@@ -28,6 +28,7 @@ export default function SignupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const role = searchParams.get('role') || 'buyer'
+  const inviteToken = searchParams.get('invite')
 
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -78,6 +79,7 @@ export default function SignupPage() {
         body: JSON.stringify({
           email,
           password,
+          inviteToken,
           userData: {
             fullName,
             role: role.toUpperCase(),

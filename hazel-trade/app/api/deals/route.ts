@@ -41,7 +41,9 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (dealError) throw dealError
+    if (dealError || !deal) {
+      throw dealError || new Error('Failed to create deal')
+    }
 
     // Create deal steps
     const stepsToCreate = DEAL_STEPS.map(step => ({
