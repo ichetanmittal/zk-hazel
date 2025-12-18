@@ -18,7 +18,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   }
 
   // Get deal details
-  const { data: deal } = await supabase
+  const { data: deal, error: dealError } = await supabase
     .from('deals')
     .select(`
       *,
@@ -29,14 +29,15 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     .eq('id', id)
     .single()
 
-  if (!deal) {
+  if (dealError || !deal) {
     return <div className="p-8">Deal not found</div>
   }
 
-  const getStatusColor = (status: string) => {
+  const currentDeal: any = deal
+
+  const getStatusColor = (status: string): 'default' | 'destructive' | 'outline' | 'secondary' => {
     switch (status) {
       case 'COMPLETED':
-        return 'success'
       case 'MATCHED':
       case 'IN_PROGRESS':
         return 'default'
@@ -61,19 +62,19 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold">{deal.deal_number}</h1>
-              <Badge variant={getStatusColor(deal.status)}>
-                {deal.status.replace('_', ' ')}
+              <h1 className="text-3xl font-bold">{currentDeal.deal_number}</h1>
+              <Badge variant={getStatusColor(currentDeal.status)}>
+                {currentDeal.status.replace('_', ' ')}
               </Badge>
             </div>
             <p className="text-lg text-slate-600 dark:text-slate-400">
-              {deal.quantity.toLocaleString()} {deal.quantity_unit} {deal.product_type.replace('_', ' ')} — {deal.location}
+              {currentDeal.quantity.toLocaleString()} {currentDeal.quantity_unit} {currentDeal.product_type.replace('_', ' ')} — {currentDeal.location}
             </p>
             <p className="text-slate-500">
-              ${deal.estimated_value.toLocaleString()} • {deal.delivery_terms}
+              ${currentDeal.estimated_value.toLocaleString()} • {currentDeal.delivery_terms}
             </p>
           </div>
-          <Link href={`/dashboard/data-room?deal=${deal.id}`}>
+          <Link href={`/dashboard/data-room?deal=${currentDeal.id}`}>
             <Button>
               <FileText className="w-4 h-4 mr-2" />
               Data Room
@@ -93,7 +94,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <WorkflowTrackerWrapper currentStep={deal.current_step || 1} dealId={deal.id} />
+              <WorkflowTrackerWrapper currentStep={currentDeal.current_step || 1} dealId={currentDeal.id} />
             </CardContent>
           </Card>
         </div>
@@ -112,10 +113,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 </p>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">
-                    {deal.buyer?.name || 'Pending invitation'}
+                    {currentDeal.buyer?.name || 'Pending invitation'}
                   </p>
-                  {deal.buyer_verified && (
-                    <Badge variant="success" className="text-xs">
+                  {currentDeal.buyer_verified && (
+                    <Badge variant="default" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                       ✓ Verified
                     </Badge>
                   )}
@@ -128,10 +129,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 </p>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">
-                    {deal.seller?.name || 'Pending invitation'}
+                    {currentDeal.seller?.name || 'Pending invitation'}
                   </p>
-                  {deal.seller_verified && (
-                    <Badge variant="success" className="text-xs">
+                  {currentDeal.seller_verified && (
+                    <Badge variant="default" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                       ✓ Verified
                     </Badge>
                   )}
@@ -142,7 +143,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
                   Broker
                 </p>
-                <p className="font-semibold">{deal.broker?.full_name}</p>
+                <p className="font-semibold">{currentDeal.broker?.full_name}</p>
               </div>
             </CardContent>
           </Card>
@@ -156,25 +157,25 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               <div>
                 <p className="text-slate-600 dark:text-slate-400">Created</p>
                 <p className="font-medium">
-                  {new Date(deal.created_at).toLocaleDateString()}
+                  {new Date(currentDeal.created_at).toLocaleDateString()}
                 </p>
               </div>
-              {deal.matched_at && (
+              {currentDeal.matched_at && (
                 <div>
                   <p className="text-slate-600 dark:text-slate-400">Matched</p>
                   <p className="font-medium">
-                    {new Date(deal.matched_at).toLocaleDateString()}
+                    {new Date(currentDeal.matched_at).toLocaleDateString()}
                   </p>
                 </div>
               )}
               <div>
                 <p className="text-slate-600 dark:text-slate-400">Progress</p>
                 <div className="flex items-center gap-2">
-                  <p className="font-medium">Step {deal.current_step}/12</p>
+                  <p className="font-medium">Step {currentDeal.current_step}/12</p>
                   <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-600 rounded-full"
-                      style={{ width: `${(deal.current_step / 12) * 100}%` }}
+                      style={{ width: `${(currentDeal.current_step / 12) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -183,14 +184,14 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           </Card>
 
           {/* Notes */}
-          {deal.notes && (
+          {currentDeal.notes && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Notes</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {deal.notes}
+                  {currentDeal.notes}
                 </p>
               </CardContent>
             </Card>

@@ -32,15 +32,17 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
   }
 
   // Get deal details
-  const { data: deal } = await supabase
+  const { data: deal, error: dealError } = await supabase
     .from('deals')
     .select('*')
     .eq('id', dealId)
     .single()
 
-  if (!deal) {
+  if (dealError || !deal) {
     return <div className="p-8">Deal not found</div>
   }
+
+  const currentDeal: any = deal
 
   // Get documents for this deal
   const { data: documents } = await supabase
@@ -49,18 +51,20 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
     .eq('deal_id', dealId)
     .order('created_at', { ascending: false })
 
+  const dealDocuments: any[] = documents || []
+
   // Group documents by folder
   const folders = {
     AGREEMENTS: { name: 'Agreements', icon: '📋', unlocked: true, docs: [] as any[] },
-    POF: { name: 'Proof of Funds', icon: '💰', unlocked: deal.buyer_verified, docs: [] as any[] },
-    POP: { name: 'Proof of Product', icon: '🛢️', unlocked: deal.seller_verified, docs: [] as any[] },
-    CONTRACTS: { name: 'SPA & Contracts', icon: '📝', unlocked: deal.current_step >= 6, docs: [] as any[] },
-    INSPECTION: { name: 'Inspection Reports', icon: '🔬', unlocked: deal.current_step >= 8, docs: [] as any[] },
-    PAYMENT: { name: 'Payment Documents', icon: '💳', unlocked: deal.current_step >= 10, docs: [] as any[] },
+    POF: { name: 'Proof of Funds', icon: '💰', unlocked: currentDeal.buyer_verified, docs: [] as any[] },
+    POP: { name: 'Proof of Product', icon: '🛢️', unlocked: currentDeal.seller_verified, docs: [] as any[] },
+    CONTRACTS: { name: 'SPA & Contracts', icon: '📝', unlocked: currentDeal.current_step >= 6, docs: [] as any[] },
+    INSPECTION: { name: 'Inspection Reports', icon: '🔬', unlocked: currentDeal.current_step >= 8, docs: [] as any[] },
+    PAYMENT: { name: 'Payment Documents', icon: '💳', unlocked: currentDeal.current_step >= 10, docs: [] as any[] },
   }
 
   // Group documents
-  documents?.forEach((doc) => {
+  dealDocuments.forEach((doc) => {
     if (folders[doc.folder as keyof typeof folders]) {
       folders[doc.folder as keyof typeof folders].docs.push(doc)
     }
@@ -71,7 +75,7 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Data Room</h1>
         <p className="text-slate-600 dark:text-slate-400">
-          Deal {deal.deal_number} • Secure document vault
+          Deal {currentDeal.deal_number} • Secure document vault
         </p>
       </div>
 
@@ -89,7 +93,7 @@ export default async function DataRoomPage({ searchParams }: { searchParams: { d
               <div className="flex items-center justify-between mb-2">
                 <div className="text-3xl">{folder.icon}</div>
                 {folder.unlocked ? (
-                  <Badge variant="success" className="text-xs">
+                  <Badge variant="default" className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                     Unlocked
                   </Badge>
                 ) : (

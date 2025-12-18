@@ -76,26 +76,29 @@ export async function POST(request: Request) {
         folder: folder,
         uploaded_by: user.id,
         zk_verified: false,
-      })
+      } as any)
       .select()
       .single()
 
-    if (docError) {
+    if (docError || !document) {
       console.error('Document record error:', docError)
       // Clean up uploaded file
       await supabase.storage.from('documents').remove([filePath])
       return NextResponse.json({ error: 'Failed to create document record' }, { status: 500 })
     }
 
+    const createdDocument: any = document
+
     // Simulate ZK verification (in production, this would be done by a background job)
     setTimeout(async () => {
-      await supabase
+      const supabaseClient = await createClient()
+      await (supabaseClient as any)
         .from('documents')
         .update({ zk_verified: true, verified_at: new Date().toISOString() })
-        .eq('id', document.id)
+        .eq('id', createdDocument.id)
 
       // Create notification
-      await supabase.from('notifications').insert({
+      await (supabaseClient as any).from('notifications').insert({
         user_id: user.id,
         type: 'DOCUMENT_UPLOADED',
         title: 'Document Verified',
@@ -107,7 +110,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      document,
+      document: createdDocument,
       message: 'Document uploaded successfully',
     })
   } catch (error: any) {

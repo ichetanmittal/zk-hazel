@@ -45,17 +45,19 @@ export async function POST(request: Request) {
       throw dealError || new Error('Failed to create deal')
     }
 
+    const createdDeal: any = deal
+
     // Create deal steps
     const stepsToCreate = DEAL_STEPS.map(step => ({
-      deal_id: deal.id,
+      deal_id: createdDeal.id,
       step_number: step.number,
       step_name: step.name,
-      status: 'PENDING',
+      status: 'PENDING' as const,
     }))
 
     const { error: stepsError } = await supabase
       .from('deal_steps')
-      .insert(stepsToCreate)
+      .insert(stepsToCreate as any)
 
     if (stepsError) throw stepsError
 
@@ -64,14 +66,14 @@ export async function POST(request: Request) {
     const { error: buyerInviteError } = await supabase
       .from('invites')
       .insert({
-        deal_id: deal.id,
+        deal_id: createdDeal.id,
         email: buyerData.email,
         company_name: buyerData.company,
         role: 'BUYER',
         invited_by: user.id,
         token: buyerToken,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-      })
+      } as any)
 
     if (buyerInviteError) throw buyerInviteError
 
@@ -80,14 +82,14 @@ export async function POST(request: Request) {
     const { error: sellerInviteError } = await supabase
       .from('invites')
       .insert({
-        deal_id: deal.id,
+        deal_id: createdDeal.id,
         email: sellerData.email,
         company_name: sellerData.company,
         role: 'SELLER',
         invited_by: user.id,
         token: sellerToken,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      })
+      } as any)
 
     if (sellerInviteError) throw sellerInviteError
 
@@ -96,14 +98,14 @@ export async function POST(request: Request) {
       const { error: commissionError } = await supabase
         .from('commissions')
         .insert({
-          deal_id: deal.id,
+          deal_id: createdDeal.id,
           commission_type: commissionData.type,
           commission_rate: commissionData.amount,
           total_amount: 0, // Calculate based on deal value
           currency: 'USD',
           distributions: [],
           status: 'PENDING',
-        })
+        } as any)
 
       if (commissionError) throw commissionError
     }
@@ -114,12 +116,12 @@ export async function POST(request: Request) {
       type: 'DEAL_CREATED',
       title: 'Deal Created',
       message: `Deal ${dealNumber} has been created successfully. Invites sent to buyer and seller.`,
-      link: `/dashboard/deals/${deal.id}`,
+      link: `/dashboard/deals/${createdDeal.id}`,
       read: false,
-    })
+    } as any)
 
     // Get broker details for email
-    const { data: brokerData } = await supabase
+    const { data: brokerData }: any = await supabase
       .from('users')
       .select('full_name')
       .eq('id', user.id)
@@ -162,7 +164,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      deal,
+      deal: createdDeal,
       inviteLinks: {
         buyer: buyerInviteLink,
         seller: sellerInviteLink,
@@ -184,7 +186,7 @@ export async function GET(request: Request) {
     }
 
     // Get user role
-    const { data: userData } = await supabase
+    const { data: userData }: any = await supabase
       .from('users')
       .select('role, company_id')
       .eq('id', user.id)

@@ -22,7 +22,8 @@ export default async function DealsPage() {
     .eq('id', user.id)
     .single()
 
-  const role = userData?.role
+  const currentUser: any = userData
+  const role = currentUser?.role
 
   // Get deals based on role
   let dealsQuery = supabase

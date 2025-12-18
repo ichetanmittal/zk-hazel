@@ -24,7 +24,7 @@ export default async function StepDetailPage({
   const stepNumber = parseInt(stepNumberStr)
 
   // Get deal details
-  const { data: deal } = await supabase
+  const { data: deal, error: dealError } = await supabase
     .from('deals')
     .select(`
       *,
@@ -35,21 +35,25 @@ export default async function StepDetailPage({
     .eq('id', id)
     .single()
 
-  if (!deal) {
+  if (dealError || !deal) {
     return <div className="p-8">Deal not found</div>
   }
 
+  const currentDeal: any = deal
+
   // Get step details
-  const { data: step } = await supabase
+  const { data: step, error: stepError } = await supabase
     .from('deal_steps')
     .select('*')
     .eq('deal_id', id)
     .eq('step_number', stepNumber)
     .single()
 
-  if (!step) {
+  if (stepError || !step) {
     return <div className="p-8">Step not found</div>
   }
+
+  const currentStep: any = step
 
   // Get documents for this step
   const { data: documents } = await supabase
@@ -58,7 +62,9 @@ export default async function StepDetailPage({
     .eq('deal_id', id)
     .order('created_at', { ascending: false })
 
-  const stepInfo = DEAL_STEPS.find(s => s.number === stepNumber)
+  const stepDocuments: any[] = documents || []
+
+  const stepInfo: any = DEAL_STEPS.find(s => s.number === stepNumber)
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -75,10 +81,9 @@ export default async function StepDetailPage({
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): 'default' | 'destructive' | 'outline' | 'secondary' => {
     switch (status) {
       case 'COMPLETED':
-        return 'success'
       case 'IN_PROGRESS':
         return 'default'
       case 'BLOCKED':
@@ -103,16 +108,16 @@ export default async function StepDetailPage({
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">Step {stepNumber}: {stepInfo?.name}</h1>
-              <Badge variant={getStatusColor(step.status)}>
-                {step.status}
+              <Badge variant={getStatusColor(currentStep.status)}>
+                {currentStep.status}
               </Badge>
             </div>
             <p className="text-slate-600 dark:text-slate-400">
-              {deal.deal_number} " {stepInfo?.phase}
+              {currentDeal.deal_number} " {stepInfo?.phase}
             </p>
           </div>
           <div className="flex gap-2">
-            {step.status === 'IN_PROGRESS' && (
+            {currentStep.status === 'IN_PROGRESS' && (
               <Button>
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Mark Complete
@@ -188,9 +193,9 @@ export default async function StepDetailPage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {documents && documents.length > 0 ? (
+              {stepDocuments && stepDocuments.length > 0 ? (
                 <div className="space-y-2">
-                  {documents.map((doc) => (
+                  {stepDocuments.map((doc) => (
                     <div
                       key={doc.id}
                       className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -205,7 +210,7 @@ export default async function StepDetailPage({
                         </div>
                       </div>
                       {doc.zk_verified && (
-                        <Badge variant="success" className="text-xs">
+                        <Badge variant="default" style={{ backgroundColor: 'rgb(220 252 231)', color: 'rgb(21 128 61)' }} className="text-xs">
                            Verified
                         </Badge>
                       )}
@@ -231,29 +236,29 @@ export default async function StepDetailPage({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {step.started_at && (
+                {currentStep.started_at && (
                   <div className="flex gap-3">
                     <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-600 mt-2" />
                     <div>
                       <p className="font-medium text-sm">Step Started</p>
                       <p className="text-xs text-slate-500">
-                        {new Date(step.started_at).toLocaleString()}
+                        {new Date(currentStep.started_at).toLocaleString()}
                       </p>
                     </div>
                   </div>
                 )}
-                {step.completed_at && (
+                {currentStep.completed_at && (
                   <div className="flex gap-3">
                     <div className="flex-shrink-0 w-2 h-2 rounded-full bg-green-600 mt-2" />
                     <div>
                       <p className="font-medium text-sm">Step Completed</p>
                       <p className="text-xs text-slate-500">
-                        {new Date(step.completed_at).toLocaleString()}
+                        {new Date(currentStep.completed_at).toLocaleString()}
                       </p>
                     </div>
                   </div>
                 )}
-                {step.status === 'PENDING' && (
+                {currentStep.status === 'PENDING' && (
                   <div className="text-center py-4">
                     <p className="text-sm text-slate-500">No activity yet</p>
                   </div>
@@ -272,41 +277,41 @@ export default async function StepDetailPage({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
-                {getStatusIcon(step.status)}
+                {getStatusIcon(currentStep.status)}
                 <div>
-                  <p className="font-semibold">{step.status}</p>
+                  <p className="font-semibold">{currentStep.status}</p>
                   <p className="text-sm text-slate-500">Current status</p>
                 </div>
               </div>
 
-              {step.started_at && (
+              {currentStep.started_at && (
                 <div className="pt-4 border-t">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
                     Started
                   </p>
                   <p className="font-medium text-sm">
-                    {new Date(step.started_at).toLocaleDateString()}
+                    {new Date(currentStep.started_at).toLocaleDateString()}
                   </p>
                 </div>
               )}
 
-              {step.completed_at && (
+              {currentStep.completed_at && (
                 <div className="pt-4 border-t">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
                     Completed
                   </p>
                   <p className="font-medium text-sm">
-                    {new Date(step.completed_at).toLocaleDateString()}
+                    {new Date(currentStep.completed_at).toLocaleDateString()}
                   </p>
                 </div>
               )}
 
-              {step.notes && (
+              {currentStep.notes && (
                 <div className="pt-4 border-t">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
                     Notes
                   </p>
-                  <p className="text-sm">{step.notes}</p>
+                  <p className="text-sm">{currentStep.notes}</p>
                 </div>
               )}
             </CardContent>
