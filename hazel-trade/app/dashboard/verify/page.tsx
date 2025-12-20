@@ -175,6 +175,11 @@ export default function VerifyPage() {
 
   const deal = pendingDeals[0]
 
+  const handleSkip = () => {
+    router.push('/dashboard')
+    router.refresh()
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -197,13 +202,30 @@ export default function VerifyPage() {
           <p className="text-sm text-slate-600 text-center">Step 3 of 4</p>
         </div>
 
-        <DocumentUploadForm
-          type={userRole === 'BUYER' ? 'POF' : 'POP'}
-          dealId={deal.id}
-          companyId={companyId!}
-          userRole={userRole!}
-          onUploadComplete={handleUploadComplete}
-        />
+        <Card>
+          <CardContent className="pt-6">
+            <DocumentUploadForm
+              type={userRole === 'BUYER' ? 'POF' : 'POP'}
+              dealId={deal.id}
+              companyId={companyId!}
+              userRole={userRole!}
+              onUploadComplete={handleUploadComplete}
+            />
+
+            <div className="mt-6 pt-6 border-t">
+              <Button
+                variant="outline"
+                onClick={handleSkip}
+                className="w-full"
+              >
+                Skip for Now
+              </Button>
+              <p className="text-xs text-center text-slate-500 mt-2">
+                You can complete verification later from your dashboard. Your deal will remain in pending state.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

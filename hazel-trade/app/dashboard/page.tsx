@@ -10,7 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { PlusCircle, TrendingUp, Clock, CheckCircle } from 'lucide-react'
+import { PlusCircle, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -31,9 +31,31 @@ export default async function DashboardPage() {
     .single()
 
   const role = userData?.role
+  const companyId = userData?.company_id
 
   console.log('Dashboard - User role:', role)
-  console.log('Dashboard - Company ID:', userData?.company_id)
+  console.log('Dashboard - Company ID:', companyId)
+
+  // Check if user needs verification (for buyers and sellers)
+  let needsVerification = false
+  let pendingDeals: any[] = []
+
+  if (role === 'BUYER' || role === 'SELLER') {
+    const roleField = role === 'BUYER' ? 'buyer_id' : 'seller_id'
+    const verifiedField = role === 'BUYER' ? 'buyer_verified' : 'seller_verified'
+
+    const { data: unverifiedDeals } = await supabase
+      .from('deals')
+      .select('*')
+      .eq(roleField, companyId)
+      .eq(verifiedField, false)
+      .in('status', ['DRAFT', 'PENDING_VERIFICATION'])
+
+    if (unverifiedDeals && unverifiedDeals.length > 0) {
+      needsVerification = true
+      pendingDeals = unverifiedDeals
+    }
+  }
 
   // Get deals based on role
   let dealsQuery = supabase
@@ -74,6 +96,35 @@ export default async function DashboardPage() {
           {role === 'SELLER' && 'Manage your sales and inventory'}
         </p>
       </div>
+
+      {/* Verification Banner for Unverified Buyers/Sellers */}
+      {needsVerification && (
+        <div className="mb-6">
+          <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                    Complete Verification to Access Your Deal
+                  </h3>
+                  <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                    You have {pendingDeals.length} deal{pendingDeals.length !== 1 ? 's' : ''} waiting for verification.
+                    Upload your {role === 'BUYER' ? 'Proof of Funds (POF)' : 'Proof of Product (POP)'} to unlock the deal and start trading.
+                  </p>
+                  <Link href="/dashboard/verify">
+                    <Button className="bg-orange-600 hover:bg-orange-700 text-white">
+                      Complete Verification Now
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
