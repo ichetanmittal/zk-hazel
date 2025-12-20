@@ -56,6 +56,98 @@ export default async function StepDetailPage({
 
   const currentStep: any = step
 
+  // ACCESS CONTROL: Check if step is accessible
+  // Steps are only accessible after deal is MATCHED
+  if (currentDeal.status === 'PENDING_VERIFICATION' || currentDeal.status === 'DRAFT') {
+    return (
+      <div className="p-8">
+        <Link href={`/dashboard/deals/${id}`}>
+          <Button variant="ghost" size="sm" className="mb-4">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Deal
+          </Button>
+        </Link>
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="w-8 h-8 text-orange-600 flex-shrink-0 mt-1" />
+              <div>
+                <h2 className="text-xl font-bold text-orange-900 dark:text-orange-100 mb-2">
+                  Workflow Locked - Verification Required
+                </h2>
+                <p className="text-orange-800 dark:text-orange-200 mb-4">
+                  The 12-step trading workflow will unlock after both buyer and seller complete verification (POF/POP upload).
+                </p>
+                <div className="space-y-2 text-sm text-orange-700 dark:text-orange-300">
+                  <div className="flex items-center gap-2">
+                    {currentDeal.buyer_verified ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Clock className="w-4 h-4" />
+                    )}
+                    <span>Buyer Verification (POF): {currentDeal.buyer_verified ? 'Complete' : 'Pending'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {currentDeal.seller_verified ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <Clock className="w-4 h-4" />
+                    )}
+                    <span>Seller Verification (POP): {currentDeal.seller_verified ? 'Complete' : 'Pending'}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-4">
+                  Once both parties verify, Step 1 (NCNDA/IMFPA) will automatically activate and the workflow will begin.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // ACCESS CONTROL: Check if this specific step is accessible
+  // Users can only access steps that are IN_PROGRESS, COMPLETED, or the current step
+  const isStepAccessible =
+    currentStep.status === 'IN_PROGRESS' ||
+    currentStep.status === 'COMPLETED' ||
+    stepNumber <= currentDeal.current_step
+
+  if (!isStepAccessible) {
+    return (
+      <div className="p-8">
+        <Link href={`/dashboard/deals/${id}`}>
+          <Button variant="ghost" size="sm" className="mb-4">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Deal
+          </Button>
+        </Link>
+        <Card className="border-slate-200 dark:border-slate-800">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="w-8 h-8 text-slate-400 flex-shrink-0 mt-1" />
+              <div>
+                <h2 className="text-xl font-bold mb-2">Step Not Yet Available</h2>
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  This step is locked. Complete the previous steps in the workflow to unlock Step {stepNumber}.
+                </p>
+                <p className="text-sm text-slate-500">
+                  Current Step: <strong>Step {currentDeal.current_step}</strong>
+                </p>
+                <Link href={`/dashboard/deals/${id}/steps/${currentDeal.current_step}`}>
+                  <Button className="mt-4">
+                    Go to Current Step
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // Get documents for this step
   const { data: documents } = await supabase
     .from('documents')

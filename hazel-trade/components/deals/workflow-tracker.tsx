@@ -45,17 +45,19 @@ export default function WorkflowTracker({ currentStep, onStepClick }: WorkflowTr
           <div className="space-y-2">
             {steps.map((step) => {
               const status = getStepStatus(step.number)
+              const isLocked = status === 'pending'
               return (
                 <button
                   key={step.number}
-                  onClick={() => onStepClick?.(step.number)}
+                  onClick={() => !isLocked && onStepClick?.(step.number)}
+                  disabled={isLocked}
                   className={`w-full text-left p-4 rounded-lg border transition-all ${
                     status === 'completed'
                       ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
                       : status === 'current'
                       ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
-                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                  } hover:shadow-md`}
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 opacity-60'
+                  } ${!isLocked ? 'hover:shadow-md cursor-pointer' : 'cursor-not-allowed'}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
@@ -74,6 +76,11 @@ export default function WorkflowTracker({ currentStep, onStepClick }: WorkflowTr
                         {status === 'completed' && (
                           <Badge variant="success" className="text-xs">
                             Completed
+                          </Badge>
+                        )}
+                        {status === 'pending' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Locked
                           </Badge>
                         )}
                       </div>
