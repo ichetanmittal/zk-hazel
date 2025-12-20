@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,9 +16,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PRODUCT_TYPES, QUANTITY_UNITS, DELIVERY_TERMS, COMMISSION_TYPES } from '@/lib/utils/constants'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
 
 export default function CreateDealWizard() {
   const router = useRouter()
+  const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -38,6 +40,8 @@ export default function CreateDealWizard() {
   const [buyerContact, setBuyerContact] = useState('')
   const [buyerEmail, setBuyerEmail] = useState('')
   const [buyerPhone, setBuyerPhone] = useState('')
+  const [selectedBuyerId, setSelectedBuyerId] = useState('')
+  const [existingBuyers, setExistingBuyers] = useState<any[]>([])
 
   // Step 3: Seller
   const [sellerType, setSellerType] = useState<'new' | 'existing'>('new')
@@ -45,6 +49,8 @@ export default function CreateDealWizard() {
   const [sellerContact, setSellerContact] = useState('')
   const [sellerEmail, setSellerEmail] = useState('')
   const [sellerPhone, setSellerPhone] = useState('')
+  const [selectedSellerId, setSelectedSellerId] = useState('')
+  const [existingSellers, setExistingSellers] = useState<any[]>([])
 
   // Step 4: Commission
   const [commissionType, setCommissionType] = useState('')
@@ -61,23 +67,65 @@ export default function CreateDealWizard() {
     setStep(2)
   }
 
+  // Fetch existing companies when step changes
+  useEffect(() => {
+    const fetchExistingCompanies = async () => {
+      if (step === 2) {
+        // Fetch buyers
+        const response = await fetch('/api/companies?role=buyer')
+        const data = await response.json()
+        if (data.companies) {
+          setExistingBuyers(data.companies)
+        }
+      } else if (step === 3) {
+        // Fetch sellers
+        const response = await fetch('/api/companies?role=seller')
+        const data = await response.json()
+        if (data.companies) {
+          setExistingSellers(data.companies)
+        }
+      }
+    }
+    fetchExistingCompanies()
+  }, [step])
+
   const handleStep2 = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!buyerCompany || !buyerContact || !buyerEmail) {
-      setError('Please fill all required fields')
-      return
+
+    // Validate based on buyer type
+    if (buyerType === 'new') {
+      if (!buyerCompany || !buyerContact || !buyerEmail) {
+        setError('Please fill all required fields')
+        return
+      }
+    } else {
+      if (!selectedBuyerId) {
+        setError('Please select a buyer')
+        return
+      }
     }
+
     setStep(3)
   }
 
   const handleStep3 = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!sellerCompany || !sellerContact || !sellerEmail) {
-      setError('Please fill all required fields')
-      return
+
+    // Validate based on seller type
+    if (sellerType === 'new') {
+      if (!sellerCompany || !sellerContact || !sellerEmail) {
+        setError('Please fill all required fields')
+        return
+      }
+    } else {
+      if (!selectedSellerId) {
+        setError('Please select a seller')
+        return
+      }
     }
+
     setStep(4)
   }
 
@@ -87,6 +135,26 @@ export default function CreateDealWizard() {
     setError('')
 
     try {
+      // Prepare buyer data based on type
+      const buyerData = buyerType === 'existing'
+        ? { existingCompanyId: selectedBuyerId }
+        : {
+            company: buyerCompany,
+            contact: buyerContact,
+            email: buyerEmail,
+            phone: buyerPhone || null,
+          }
+
+      // Prepare seller data based on type
+      const sellerData = sellerType === 'existing'
+        ? { existingCompanyId: selectedSellerId }
+        : {
+            company: sellerCompany,
+            contact: sellerContact,
+            email: sellerEmail,
+            phone: sellerPhone || null,
+          }
+
       // Call API to create deal
       const response = await fetch('/api/deals', {
         method: 'POST',
@@ -102,18 +170,10 @@ export default function CreateDealWizard() {
             location,
             notes: notes || null,
           },
-          buyerData: {
-            company: buyerCompany,
-            contact: buyerContact,
-            email: buyerEmail,
-            phone: buyerPhone || null,
-          },
-          sellerData: {
-            company: sellerCompany,
-            contact: sellerContact,
-            email: sellerEmail,
-            phone: sellerPhone || null,
-          },
+          buyerData,
+          buyerType,
+          sellerData,
+          sellerType,
           commissionData: commissionType && commissionAmount ? {
             type: commissionType,
             amount: parseFloat(commissionAmount),
@@ -127,11 +187,18 @@ export default function CreateDealWizard() {
         throw new Error(result.error || 'Failed to create deal')
       }
 
-      // Show success with invite links
-      alert(`Deal ${result.deal.deal_number} created successfully!\n\nInvite Links:\nBuyer: ${result.inviteLinks.buyer}\nSeller: ${result.inviteLinks.seller}`)
+      // Show success toast
+      toast({
+        variant: "success",
+        title: `Deal ${result.deal.deal_number} Created Successfully!`,
+        description: result.message,
+      })
 
-      router.push(`/dashboard/deals/${result.deal.id}`)
-      router.refresh()
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        router.push('/dashboard')
+        router.refresh()
+      }, 1500)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -291,48 +358,110 @@ export default function CreateDealWizard() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleStep2} className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Company Name *</Label>
-                  <Input
-                    placeholder="Apex Commodities Ltd"
-                    value={buyerCompany}
-                    onChange={(e) => setBuyerCompany(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Contact Name *</Label>
-                  <Input
-                    placeholder="John Smith"
-                    value={buyerContact}
-                    onChange={(e) => setBuyerContact(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Contact Email *</Label>
-                  <Input
-                    type="email"
-                    placeholder="john@apexcommodities.com"
-                    value={buyerEmail}
-                    onChange={(e) => setBuyerEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Contact Phone (optional)</Label>
-                  <Input
-                    type="tel"
-                    placeholder="+1 555 123 4567"
-                    value={buyerPhone}
-                    onChange={(e) => setBuyerPhone(e.target.value)}
-                  />
+              {/* Radio button selection */}
+              <div className="space-y-3 pb-4 border-b">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="buyerType"
+                      value="new"
+                      checked={buyerType === 'new'}
+                      onChange={() => {
+                        setBuyerType('new')
+                        setSelectedBuyerId('')
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">Invite New Buyer</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="buyerType"
+                      value="existing"
+                      checked={buyerType === 'existing'}
+                      onChange={() => {
+                        setBuyerType('existing')
+                        setBuyerCompany('')
+                        setBuyerContact('')
+                        setBuyerEmail('')
+                        setBuyerPhone('')
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">Select Existing Buyer (from past deals)</span>
+                  </label>
                 </div>
               </div>
+
+              {/* Conditional rendering based on buyer type */}
+              {buyerType === 'new' ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Company Name *</Label>
+                    <Input
+                      placeholder="Apex Commodities Ltd"
+                      value={buyerCompany}
+                      onChange={(e) => setBuyerCompany(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Contact Name *</Label>
+                    <Input
+                      placeholder="John Smith"
+                      value={buyerContact}
+                      onChange={(e) => setBuyerContact(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Contact Email *</Label>
+                    <Input
+                      type="email"
+                      placeholder="john@apexcommodities.com"
+                      value={buyerEmail}
+                      onChange={(e) => setBuyerEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Contact Phone (optional)</Label>
+                    <Input
+                      type="tel"
+                      placeholder="+1 555 123 4567"
+                      value={buyerPhone}
+                      onChange={(e) => setBuyerPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Select Buyer Company *</Label>
+                  {existingBuyers.length > 0 ? (
+                    <Select value={selectedBuyerId} onValueChange={setSelectedBuyerId} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a company from past deals" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {existingBuyers.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name} ({company.country})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-sm text-slate-500 p-4 bg-slate-50 dark:bg-slate-800 rounded">
+                      No existing buyers found. You haven't worked with any buyers yet.
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setStep(1)}>
@@ -354,48 +483,110 @@ export default function CreateDealWizard() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleStep3} className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Company Name *</Label>
-                  <Input
-                    placeholder="Vitol Trading"
-                    value={sellerCompany}
-                    onChange={(e) => setSellerCompany(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Contact Name *</Label>
-                  <Input
-                    placeholder="Jane Doe"
-                    value={sellerContact}
-                    onChange={(e) => setSellerContact(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Contact Email *</Label>
-                  <Input
-                    type="email"
-                    placeholder="jane@vitol.com"
-                    value={sellerEmail}
-                    onChange={(e) => setSellerEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Contact Phone (optional)</Label>
-                  <Input
-                    type="tel"
-                    placeholder="+44 20 1234 5678"
-                    value={sellerPhone}
-                    onChange={(e) => setSellerPhone(e.target.value)}
-                  />
+              {/* Radio button selection */}
+              <div className="space-y-3 pb-4 border-b">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="sellerType"
+                      value="new"
+                      checked={sellerType === 'new'}
+                      onChange={() => {
+                        setSellerType('new')
+                        setSelectedSellerId('')
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">Invite New Seller</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="sellerType"
+                      value="existing"
+                      checked={sellerType === 'existing'}
+                      onChange={() => {
+                        setSellerType('existing')
+                        setSellerCompany('')
+                        setSellerContact('')
+                        setSellerEmail('')
+                        setSellerPhone('')
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm font-medium">Select Existing Seller (from past deals)</span>
+                  </label>
                 </div>
               </div>
+
+              {/* Conditional rendering based on seller type */}
+              {sellerType === 'new' ? (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Company Name *</Label>
+                    <Input
+                      placeholder="Vitol Trading"
+                      value={sellerCompany}
+                      onChange={(e) => setSellerCompany(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Contact Name *</Label>
+                    <Input
+                      placeholder="Jane Doe"
+                      value={sellerContact}
+                      onChange={(e) => setSellerContact(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Contact Email *</Label>
+                    <Input
+                      type="email"
+                      placeholder="jane@vitol.com"
+                      value={sellerEmail}
+                      onChange={(e) => setSellerEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Contact Phone (optional)</Label>
+                    <Input
+                      type="tel"
+                      placeholder="+44 20 1234 5678"
+                      value={sellerPhone}
+                      onChange={(e) => setSellerPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Select Seller Company *</Label>
+                  {existingSellers.length > 0 ? (
+                    <Select value={selectedSellerId} onValueChange={setSelectedSellerId} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a company from past deals" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {existingSellers.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name} ({company.country})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-sm text-slate-500 p-4 bg-slate-50 dark:bg-slate-800 rounded">
+                      No existing sellers found. You haven't worked with any sellers yet.
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setStep(2)}>

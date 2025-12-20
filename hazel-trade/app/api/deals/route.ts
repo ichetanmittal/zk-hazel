@@ -16,7 +16,9 @@ export async function POST(request: Request) {
     const {
       dealData,
       buyerData,
+      buyerType,
       sellerData,
+      sellerType,
       commissionData,
     } = body
 
@@ -28,6 +30,20 @@ export async function POST(request: Request) {
 
     const dealNumber = `HT-${year}-${String((count || 0) + 1).padStart(4, '0')}`
 
+    // Determine buyer_id and seller_id
+    let buyerId = null
+    let sellerId = null
+
+    // If using existing buyer, get the company ID directly
+    if (buyerType === 'existing' && buyerData.existingCompanyId) {
+      buyerId = buyerData.existingCompanyId
+    }
+
+    // If using existing seller, get the company ID directly
+    if (sellerType === 'existing' && sellerData.existingCompanyId) {
+      sellerId = sellerData.existingCompanyId
+    }
+
     // Create deal
     const { data: deal, error: dealError } = await supabase
       .from('deals')
@@ -35,7 +51,12 @@ export async function POST(request: Request) {
         deal_number: dealNumber,
         ...dealData,
         broker_id: user.id,
-        status: 'PENDING_VERIFICATION',
+        buyer_id: buyerId,
+        seller_id: sellerId,
+        status: buyerType === 'existing' && sellerType === 'existing' ? 'MATCHED' : 'PENDING_VERIFICATION',
+        buyer_verified: buyerType === 'existing',
+        seller_verified: sellerType === 'existing',
+        matched_at: buyerType === 'existing' && sellerType === 'existing' ? new Date().toISOString() : null,
         current_step: 1,
       })
       .select()
@@ -61,37 +82,55 @@ export async function POST(request: Request) {
 
     if (stepsError) throw stepsError
 
-    // Create buyer invite
-    const buyerToken = crypto.randomUUID()
-    const { error: buyerInviteError } = await supabase
-      .from('invites')
-      .insert({
-        deal_id: createdDeal.id,
-        email: buyerData.email,
-        company_name: buyerData.company,
-        role: 'BUYER',
-        invited_by: user.id,
-        token: buyerToken,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-      } as any)
+    // If both buyer and seller are existing, activate Step 1 immediately
+    if (buyerType === 'existing' && sellerType === 'existing') {
+      await supabase
+        .from('deal_steps')
+        .update({
+          status: 'IN_PROGRESS',
+          started_at: new Date().toISOString(),
+        })
+        .eq('deal_id', createdDeal.id)
+        .eq('step_number', 1)
+    }
 
-    if (buyerInviteError) throw buyerInviteError
+    // Create buyer invite (only if new buyer)
+    let buyerToken = null
+    if (buyerType === 'new') {
+      buyerToken = crypto.randomUUID()
+      const { error: buyerInviteError } = await supabase
+        .from('invites')
+        .insert({
+          deal_id: createdDeal.id,
+          email: buyerData.email,
+          company_name: buyerData.company,
+          role: 'BUYER',
+          invited_by: user.id,
+          token: buyerToken,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+        } as any)
 
-    // Create seller invite
-    const sellerToken = crypto.randomUUID()
-    const { error: sellerInviteError } = await supabase
-      .from('invites')
-      .insert({
-        deal_id: createdDeal.id,
-        email: sellerData.email,
-        company_name: sellerData.company,
-        role: 'SELLER',
-        invited_by: user.id,
-        token: sellerToken,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      } as any)
+      if (buyerInviteError) throw buyerInviteError
+    }
 
-    if (sellerInviteError) throw sellerInviteError
+    // Create seller invite (only if new seller)
+    let sellerToken = null
+    if (sellerType === 'new') {
+      sellerToken = crypto.randomUUID()
+      const { error: sellerInviteError } = await supabase
+        .from('invites')
+        .insert({
+          deal_id: createdDeal.id,
+          email: sellerData.email,
+          company_name: sellerData.company,
+          role: 'SELLER',
+          invited_by: user.id,
+          token: sellerToken,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        } as any)
+
+      if (sellerInviteError) throw sellerInviteError
+    }
 
     // Create commission record
     if (commissionData) {
@@ -127,48 +166,64 @@ export async function POST(request: Request) {
       .eq('id', user.id)
       .single()
 
-    const buyerInviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${buyerToken}`
-    const sellerInviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${sellerToken}`
+    const inviteLinks: { buyer?: string; seller?: string } = {}
 
-    // Send email invites
-    const dealDetails = {
-      product: `${dealData.quantity} ${dealData.quantity_unit} ${dealData.product_type}`,
-      quantity: `${dealData.quantity} ${dealData.quantity_unit}`,
-      value: `$${dealData.estimated_value.toLocaleString()} ${dealData.currency || 'USD'}`,
-      location: dealData.location,
+    // Send email invites only for new companies
+    if (buyerType === 'new' && buyerToken) {
+      const buyerInviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${buyerToken}`
+      inviteLinks.buyer = buyerInviteLink
+
+      const dealDetails = {
+        product: `${dealData.quantity} ${dealData.quantity_unit} ${dealData.product_type}`,
+        quantity: `${dealData.quantity} ${dealData.quantity_unit}`,
+        value: `$${dealData.estimated_value.toLocaleString()} ${dealData.currency || 'USD'}`,
+        location: dealData.location,
+      }
+
+      await sendInviteEmail({
+        to: buyerData.email,
+        companyName: buyerData.company,
+        contactName: buyerData.contact,
+        role: 'BUYER',
+        dealNumber,
+        dealDetails,
+        inviteLink: buyerInviteLink,
+        brokerName: brokerData?.full_name || 'Your Broker',
+      })
     }
 
-    // Send buyer invite email
-    await sendInviteEmail({
-      to: buyerData.email,
-      companyName: buyerData.company,
-      contactName: buyerData.name,
-      role: 'BUYER',
-      dealNumber,
-      dealDetails,
-      inviteLink: buyerInviteLink,
-      brokerName: brokerData?.full_name || 'Your Broker',
-    })
+    if (sellerType === 'new' && sellerToken) {
+      const sellerInviteLink = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${sellerToken}`
+      inviteLinks.seller = sellerInviteLink
 
-    // Send seller invite email
-    await sendInviteEmail({
-      to: sellerData.email,
-      companyName: sellerData.company,
-      contactName: sellerData.name,
-      role: 'SELLER',
-      dealNumber,
-      dealDetails,
-      inviteLink: sellerInviteLink,
-      brokerName: brokerData?.full_name || 'Your Broker',
-    })
+      const dealDetails = {
+        product: `${dealData.quantity} ${dealData.quantity_unit} ${dealData.product_type}`,
+        quantity: `${dealData.quantity} ${dealData.quantity_unit}`,
+        value: `$${dealData.estimated_value.toLocaleString()} ${dealData.currency || 'USD'}`,
+        location: dealData.location,
+      }
+
+      await sendInviteEmail({
+        to: sellerData.email,
+        companyName: sellerData.company,
+        contactName: sellerData.contact,
+        role: 'SELLER',
+        dealNumber,
+        dealDetails,
+        inviteLink: sellerInviteLink,
+        brokerName: brokerData?.full_name || 'Your Broker',
+      })
+    }
 
     return NextResponse.json({
       success: true,
       deal: createdDeal,
-      inviteLinks: {
-        buyer: buyerInviteLink,
-        seller: sellerInviteLink,
-      },
+      inviteLinks,
+      message: buyerType === 'existing' && sellerType === 'existing'
+        ? 'Deal created and matched with existing buyer and seller!'
+        : buyerType === 'existing' || sellerType === 'existing'
+        ? 'Deal created. Invites sent to new parties.'
+        : 'Deal created. Invites sent to buyer and seller.',
     })
   } catch (error: any) {
     console.error('Deal creation error:', error)
