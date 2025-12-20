@@ -56,6 +56,22 @@ export default async function StepDetailPage({
 
   const currentStep: any = step
 
+  // Get user role
+  const { data: userData } = await supabase
+    .from('users')
+    .select('role, company_id')
+    .eq('id', user.id)
+    .single()
+
+  const userRole = (userData as any)?.role
+
+  // Get party approvals for this step
+  const { data: partyApprovals } = await supabase
+    .from('step_party_approvals')
+    .select('*')
+    .eq('deal_id', id)
+    .eq('step_number', stepNumber)
+
   // ACCESS CONTROL: Check if step is accessible
   // Steps are only accessible after deal is MATCHED
   if (currentDeal.status === 'PENDING_VERIFICATION' || currentDeal.status === 'DRAFT') {
@@ -267,6 +283,9 @@ export default async function StepDetailPage({
             dealId={id}
             stepNumber={stepNumber}
             documents={stepDocuments}
+            requiredParties={stepInfo?.requiredParties || []}
+            partyApprovals={partyApprovals || []}
+            currentUserRole={userRole}
           />
 
           {/* Activity Log */}

@@ -84,7 +84,7 @@ export async function POST(request: Request) {
 
     // If both buyer and seller are existing, activate Step 1 immediately
     if (buyerType === 'existing' && sellerType === 'existing') {
-      await supabase
+      await (supabase as any)
         .from('deal_steps')
         .update({
           status: 'IN_PROGRESS',
@@ -92,6 +92,16 @@ export async function POST(request: Request) {
         })
         .eq('deal_id', createdDeal.id)
         .eq('step_number', 1)
+
+      // Initialize party approvals for Step 1
+      const step1Info = DEAL_STEPS.find((s) => s.number === 1)
+      if (step1Info && step1Info.requiredParties) {
+        await (supabase as any).rpc('initialize_step_party_approvals', {
+          p_deal_id: createdDeal.id,
+          p_step_number: 1,
+          p_required_parties: step1Info.requiredParties,
+        })
+      }
     }
 
     // Create buyer invite (only if new buyer)

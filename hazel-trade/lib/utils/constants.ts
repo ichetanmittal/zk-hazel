@@ -1,76 +1,151 @@
-// Deal workflow steps
+// Deal workflow steps with party requirements
 export const DEAL_STEPS = [
   {
     number: 1,
     name: 'NCNDA / IMFPA',
     phase: 'PRE-TRADE',
     description: 'Non-circumvention, non-disclosure, commission terms',
+    requiredParties: ['BUYER', 'SELLER', 'BROKER'],
+    documents: ['NCNDA Agreement', 'IMFPA Agreement'],
+    requirements: [
+      'All parties must sign NCNDA',
+      'All parties must sign IMFPA with commission terms',
+    ],
   },
   {
     number: 2,
     name: 'ICPO',
     phase: 'PRE-TRADE',
     description: 'Irrevocable Corporate Purchase Order',
+    requiredParties: ['BUYER'],
+    documents: ['ICPO on company letterhead', 'Company registration certificate'],
+    requirements: [
+      'Buyer uploads ICPO',
+      'Specifies quantity, delivery terms, payment method',
+    ],
   },
   {
     number: 3,
     name: "Seller's SCO",
     phase: 'PRE-TRADE',
     description: 'Soft Corporate Offer',
+    requiredParties: ['SELLER'],
+    documents: ['SCO (Soft Corporate Offer)'],
+    requirements: [
+      'Seller provides product specifications',
+      'Price, quantity, delivery and payment terms',
+    ],
   },
   {
     number: 4,
     name: 'Buyer Signs SCO',
     phase: 'PRE-TRADE',
     description: 'Buyer accepts seller terms',
+    requiredParties: ['BUYER'],
+    documents: ['Signed SCO'],
+    requirements: [
+      'Buyer reviews and signs SCO',
+      'May request amendments',
+    ],
   },
   {
     number: 5,
     name: 'SPA Draft',
     phase: 'AGREEMENT',
     description: 'Sales & Purchase Agreement draft',
+    requiredParties: ['SELLER'],
+    documents: ['Draft SPA'],
+    requirements: [
+      'Seller drafts comprehensive SPA',
+      'Includes all contract terms',
+    ],
   },
   {
     number: 6,
     name: 'SPA Countersign',
     phase: 'AGREEMENT',
     description: 'Both parties sign SPA',
+    requiredParties: ['BUYER', 'SELLER'],
+    documents: ['Signed SPA (both parties)'],
+    requirements: [
+      'Buyer reviews and signs SPA',
+      'Seller countersigns',
+      'SPA becomes binding',
+    ],
   },
   {
     number: 7,
     name: 'Bank Readiness',
     phase: 'VERIFICATION',
     description: 'Exchange POF and POP via banks',
+    requiredParties: ['BUYER', 'SELLER'],
+    documents: ['POF (Buyer)', 'Partial POP (Seller)'],
+    requirements: [
+      'Buyer submits POF via bank',
+      'Seller submits partial POP (TSA)',
+      'Both verified by banks',
+    ],
   },
   {
     number: 8,
     name: 'DTA',
     phase: 'VERIFICATION',
     description: 'Dip Test Authorization',
+    requiredParties: ['SELLER', 'BUYER'],
+    documents: ['DTA (Seller)', 'Inspector Appointment (Buyer)'],
+    requirements: [
+      'Seller issues DTA with tank access',
+      'Buyer appoints inspector',
+    ],
   },
   {
     number: 9,
     name: 'Dip Test / Q&Q',
     phase: 'VERIFICATION',
     description: 'Quality & Quantity inspection',
+    requiredParties: ['BUYER'],
+    documents: ['Inspection Report (SGS/Bureau Veritas)'],
+    requirements: [
+      'Inspector conducts Q&Q test',
+      'Buyer uploads inspection report',
+      'Quality must match specifications',
+    ],
   },
   {
     number: 10,
     name: 'Payment & Title',
     phase: 'SETTLEMENT',
     description: 'Payment and title transfer',
+    requiredParties: ['BUYER', 'SELLER'],
+    documents: ['MT103 Payment Confirmation (Buyer)', 'Title Transfer Document (Seller)'],
+    requirements: [
+      'Buyer pays per agreed terms',
+      'Seller transfers ownership title',
+    ],
   },
   {
     number: 11,
     name: 'Lift / Delivery',
     phase: 'SETTLEMENT',
     description: 'Physical product transfer',
+    requiredParties: ['SELLER'],
+    documents: ['Bill of Lading', 'Delivery Receipt'],
+    requirements: [
+      'Product physically transferred',
+      'Delivery confirmed by receiver',
+    ],
   },
   {
     number: 12,
     name: 'Commission',
     phase: 'SETTLEMENT',
     description: 'Commission disbursement',
+    requiredParties: ['SELLER'],
+    documents: ['Commission Payment Confirmations'],
+    requirements: [
+      'Pay all intermediaries per IMFPA',
+      'Upload payment confirmations',
+    ],
   },
 ]
 
