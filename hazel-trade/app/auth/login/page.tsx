@@ -18,7 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const role = searchParams.get('role') || 'buyer'
+  const role = searchParams.get('role') || ''
   const redirectTo = searchParams.get('redirectTo') || '/dashboard'
 
   const [email, setEmail] = useState('')
@@ -64,10 +64,16 @@ function LoginForm() {
           icon: '🤝',
           color: 'purple',
         }
-      default:
+      case 'buyer':
         return {
           title: 'Buyer Login',
           icon: '💰',
+          color: 'blue',
+        }
+      default:
+        return {
+          title: 'Sign In',
+          icon: '🔐',
           color: 'blue',
         }
     }
@@ -145,7 +151,7 @@ function LoginForm() {
               <div className="text-center text-sm text-slate-600 dark:text-slate-400">
                 Don't have an account?{' '}
                 <Link
-                  href={`/auth/signup?role=${role}`}
+                  href={role ? `/auth/signup?role=${role}` : '/auth/signup?role=broker'}
                   className="text-blue-600 hover:underline font-medium"
                 >
                   Sign up
