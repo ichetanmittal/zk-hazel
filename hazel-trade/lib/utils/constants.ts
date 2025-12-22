@@ -151,47 +151,147 @@ export const DEAL_STEPS = [
 
 // Product types
 export const PRODUCT_TYPES = [
-  { value: 'JET_A1', label: 'Jet A1' },
-  { value: 'EN590', label: 'EN590 Diesel' },
-  { value: 'D6', label: 'D6 Fuel Oil' },
-  { value: 'LNG', label: 'LNG' },
-  { value: 'CRUDE', label: 'Crude Oil' },
-  { value: 'OTHER', label: 'Other' },
+  {
+    value: 'JET_A1',
+    label: 'Jet A1',
+    description: 'Aviation turbine fuel for commercial and military aircraft. High flash point, low freezing point.'
+  },
+  {
+    value: 'EN590',
+    label: 'EN590 Diesel',
+    description: 'European standard automotive diesel fuel with max 10ppm sulfur. Used for road vehicles and machinery.'
+  },
+  {
+    value: 'D6',
+    label: 'D6 Fuel Oil',
+    description: 'Heavy residual fuel oil for large engines and power generation. Requires preheating before use.'
+  },
+  {
+    value: 'LNG',
+    label: 'LNG',
+    description: 'Liquefied Natural Gas cooled to -162°C. Used for power generation, shipping fuel, and heating.'
+  },
+  {
+    value: 'CRUDE',
+    label: 'Crude Oil',
+    description: 'Unrefined petroleum extracted from wells. Processed in refineries to produce various fuels.'
+  },
+  {
+    value: 'OTHER',
+    label: 'Other',
+    description: 'Other petroleum products or commodities not listed above.'
+  },
 ]
 
 // Quantity units
 export const QUANTITY_UNITS = [
-  { value: 'MT', label: 'Metric Tons (MT)' },
-  { value: 'BBL', label: 'Barrels (BBL)' },
-  { value: 'MMBTU', label: 'MMBtu' },
+  {
+    value: 'MT',
+    label: 'Metric Tons (MT)',
+    description: 'Standard unit for oil products. 1 MT = 1,000 kg. Typically 7-8 barrels per MT depending on product density.'
+  },
+  {
+    value: 'BBL',
+    label: 'Barrels (BBL)',
+    description: 'Common unit for crude oil. 1 BBL = 42 US gallons or 159 liters. About 7.33 BBL per MT for crude oil.'
+  },
+  {
+    value: 'MMBTU',
+    label: 'MMBtu',
+    description: 'Million British Thermal Units. Standard unit for LNG and natural gas energy content.'
+  },
 ]
 
-// Delivery terms
+// Delivery terms (INCOTERMS)
 export const DELIVERY_TERMS = [
-  { value: 'FOB', label: 'FOB (Free on Board)' },
-  { value: 'CIF', label: 'CIF (Cost, Insurance & Freight)' },
-  { value: 'EX_TANK', label: 'Ex-Tank' },
-  { value: 'DES', label: 'DES (Delivered Ex Ship)' },
-  { value: 'DAP', label: 'DAP (Delivered at Place)' },
+  {
+    value: 'FOB',
+    label: 'FOB (Free on Board)',
+    description: 'Seller delivers goods on board vessel at named port. Buyer pays shipping, insurance, and import costs. Risk transfers when goods are loaded on ship.'
+  },
+  {
+    value: 'CIF',
+    label: 'CIF (Cost, Insurance & Freight)',
+    description: 'Seller pays shipping and insurance to destination port. Risk transfers when goods are loaded. Buyer handles import clearance and delivery from port.'
+  },
+  {
+    value: 'EX_TANK',
+    label: 'Ex-Tank',
+    description: 'Buyer collects product directly from seller\'s storage tank. Seller\'s responsibility ends at tank outlet valve. Buyer arranges all transport and insurance.'
+  },
+  {
+    value: 'DES',
+    label: 'DES (Delivered Ex Ship)',
+    description: 'Seller delivers to destination port on ship. Risk transfers when goods are available for unloading. Buyer pays unloading costs and import duties.'
+  },
+  {
+    value: 'DAP',
+    label: 'DAP (Delivered at Place)',
+    description: 'Seller delivers to named place (terminal/warehouse). Seller pays transport but not import duties. Risk transfers on arrival at destination.'
+  },
 ]
 
 // POF document types
 export const POF_TYPES = [
-  { value: 'POF_MT799', label: 'MT799 (Pre-advice of funds)' },
-  { value: 'POF_MT760', label: 'MT760 (Standby Letter of Credit)' },
-  { value: 'POF_BCL', label: 'Bank Comfort Letter (BCL)' },
-  { value: 'POF_MT199', label: 'MT199 (General bank message)' },
-  { value: 'POF_FINANCIAL_STATEMENT', label: 'Audited Financial Statement' },
+  {
+    value: 'POF_MT799',
+    label: 'MT799 (Pre-advice of funds)',
+    description: 'SWIFT message from buyer\'s bank confirming funds exist. Non-binding but shows serious intent and financial capacity.'
+  },
+  {
+    value: 'POF_MT760',
+    label: 'MT760 (Standby Letter of Credit)',
+    description: 'Bank guarantee to pay if buyer defaults. Binding commitment from issuing bank. Strongest proof of funds available.'
+  },
+  {
+    value: 'POF_BCL',
+    label: 'Bank Comfort Letter (BCL)',
+    description: 'Letter from bank confirming client relationship and general financial standing. Less formal than MT799 but widely accepted.'
+  },
+  {
+    value: 'POF_MT199',
+    label: 'MT199 (General bank message)',
+    description: 'Free-format SWIFT message for general bank communications. Can be used for fund confirmations or special arrangements.'
+  },
+  {
+    value: 'POF_FINANCIAL_STATEMENT',
+    label: 'Audited Financial Statement',
+    description: 'Certified financial statements showing company assets and liquidity. Must be audited by recognized accounting firm.'
+  },
 ]
 
 // POP document types
 export const POP_TYPES = [
-  { value: 'POP_TSA', label: 'Tank Storage Agreement (TSA)' },
-  { value: 'POP_SGS', label: 'Product Passport / SGS Report' },
-  { value: 'POP_ATSC', label: 'Authorization to Sell (ATSC)' },
-  { value: 'POP_CERTIFICATE_ORIGIN', label: 'Certificate of Origin' },
-  { value: 'POP_INJECTION_REPORT', label: 'Injection Report' },
-  { value: 'POP_EXPORT_LICENSE', label: 'Export License' },
+  {
+    value: 'POP_TSA',
+    label: 'Tank Storage Agreement (TSA)',
+    description: 'Contract with terminal operator proving product is in storage. Shows exact tank location and quantity available.'
+  },
+  {
+    value: 'POP_SGS',
+    label: 'Product Passport / SGS Report',
+    description: 'Independent lab analysis of product quality. SGS, Bureau Veritas, or similar certified inspector. Shows specifications meet standards.'
+  },
+  {
+    value: 'POP_ATSC',
+    label: 'Authorization to Sell (ATSC)',
+    description: 'Legal document proving seller has authority to sell the product. May be from refinery, tank owner, or product owner.'
+  },
+  {
+    value: 'POP_CERTIFICATE_ORIGIN',
+    label: 'Certificate of Origin',
+    description: 'Official document stating where product was produced/refined. Required for customs and may affect pricing.'
+  },
+  {
+    value: 'POP_INJECTION_REPORT',
+    label: 'Injection Report',
+    description: 'Record showing when and how much product was injected into storage tank. Proves custody and timeline.'
+  },
+  {
+    value: 'POP_EXPORT_LICENSE',
+    label: 'Export License',
+    description: 'Government authorization to export product. Required for controlled commodities or restricted destinations.'
+  },
 ]
 
 // Inspector companies
@@ -208,16 +308,40 @@ export const INSPECTOR_COMPANIES = [
 
 // Commission types
 export const COMMISSION_TYPES = [
-  { value: 'PERCENTAGE', label: '% of deal value' },
-  { value: 'FIXED', label: 'Fixed amount' },
-  { value: 'PER_UNIT', label: '$ per MT/BBL' },
+  {
+    value: 'PERCENTAGE',
+    label: '% of deal value',
+    description: 'Commission calculated as a percentage of total deal value. Example: 1% of $10M deal = $100,000 commission.'
+  },
+  {
+    value: 'FIXED',
+    label: 'Fixed amount',
+    description: 'Set commission amount regardless of deal size. Example: $50,000 flat fee per transaction.'
+  },
+  {
+    value: 'PER_UNIT',
+    label: '$ per MT/BBL',
+    description: 'Commission per unit of product. Example: $2 per MT on 50,000 MT = $100,000 commission.'
+  },
 ]
 
 // Payment methods
 export const PAYMENT_METHODS = [
-  { value: 'TT', label: 'TT (Telegraphic Transfer / Wire)' },
-  { value: 'SBLC', label: 'SBLC (Standby Letter of Credit)' },
-  { value: 'DLC', label: 'DLC (Documentary Letter of Credit)' },
+  {
+    value: 'TT',
+    label: 'TT (Telegraphic Transfer / Wire)',
+    description: 'Direct bank-to-bank electronic transfer. Fast but payment before inspection. Requires high trust or escrow arrangement.'
+  },
+  {
+    value: 'SBLC',
+    label: 'SBLC (Standby Letter of Credit)',
+    description: 'Bank guarantee activated if seller doesn\'t perform. Protects buyer. Bank pays seller after document verification.'
+  },
+  {
+    value: 'DLC',
+    label: 'DLC (Documentary Letter of Credit)',
+    description: 'Bank pays seller upon presentation of required documents. Most secure method. Bank acts as intermediary ensuring both sides fulfill obligations.'
+  },
 ]
 
 // Company types

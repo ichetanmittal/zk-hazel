@@ -10,8 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Card, CardContent } from '@/components/ui/card'
-import { Upload, File, X, CheckCircle, Loader2 } from 'lucide-react'
+import { Upload, File, X, CheckCircle, Loader2, Info } from 'lucide-react'
 import { POF_TYPES, POP_TYPES } from '@/lib/utils/constants'
 
 interface DocumentUploadFormProps {
@@ -126,7 +132,23 @@ export default function DocumentUploadForm({
 
           {/* Document Type Selection */}
           <div className="space-y-2">
-            <Label>Document Type *</Label>
+            <div className="flex items-center gap-2">
+              <Label>Document Type *</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">
+                      {type === 'POF'
+                        ? 'Proof of Funds documents verify you have the financial capacity to complete this purchase.'
+                        : 'Proof of Product documents verify you have the commodity available for sale.'}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger>
                 <SelectValue placeholder="Select document type" />
@@ -134,7 +156,19 @@ export default function DocumentUploadForm({
               <SelectContent>
                 {documentTypes.map((doc) => (
                   <SelectItem key={doc.value} value={doc.value}>
-                    {doc.label}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <span>{doc.label}</span>
+                            <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 flex-shrink-0" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-sm">
+                          <p className="text-xs">{doc.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -14,9 +14,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { PRODUCT_TYPES, QUANTITY_UNITS, DELIVERY_TERMS, COMMISSION_TYPES } from '@/lib/utils/constants'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
+import { Info } from 'lucide-react'
 
 export default function CreateDealWizard() {
   const router = useRouter()
@@ -248,7 +255,19 @@ export default function CreateDealWizard() {
             <form onSubmit={handleStep1} className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Product Type *</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Product Type *</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-sm">Hover over each product type for detailed information about the commodity.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select value={productType} onValueChange={setProductType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select product" />
@@ -256,7 +275,19 @@ export default function CreateDealWizard() {
                     <SelectContent>
                       {PRODUCT_TYPES.map((p) => (
                         <SelectItem key={p.value} value={p.value}>
-                          {p.label}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-between w-full gap-2">
+                                  <span>{p.label}</span>
+                                  <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 flex-shrink-0" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-sm">
+                                <p className="text-xs">{p.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -264,7 +295,19 @@ export default function CreateDealWizard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Delivery Terms *</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Delivery Terms *</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-sm">INCOTERMS define who pays for shipping, insurance, and when risk transfers.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select value={deliveryTerms} onValueChange={setDeliveryTerms}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select terms" />
@@ -272,7 +315,19 @@ export default function CreateDealWizard() {
                     <SelectContent>
                       {DELIVERY_TERMS.map((d) => (
                         <SelectItem key={d.value} value={d.value}>
-                          {d.label}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-between w-full gap-2">
+                                  <span>{d.label}</span>
+                                  <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 flex-shrink-0" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-sm">
+                                <p className="text-xs">{d.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -291,7 +346,19 @@ export default function CreateDealWizard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Unit *</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Unit *</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-sm">Standard measurement units for commodity trading.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select value={quantityUnit} onValueChange={setQuantityUnit}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select unit" />
@@ -299,7 +366,19 @@ export default function CreateDealWizard() {
                     <SelectContent>
                       {QUANTITY_UNITS.map((u) => (
                         <SelectItem key={u.value} value={u.value}>
-                          {u.label}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-between w-full gap-2">
+                                  <span>{u.label}</span>
+                                  <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 flex-shrink-0" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-sm">
+                                <p className="text-xs">{u.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -610,7 +689,19 @@ export default function CreateDealWizard() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Commission Type</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Commission Type</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="text-sm">How your commission will be calculated from this deal.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select value={commissionType} onValueChange={setCommissionType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
@@ -618,7 +709,19 @@ export default function CreateDealWizard() {
                     <SelectContent>
                       {COMMISSION_TYPES.map((c) => (
                         <SelectItem key={c.value} value={c.value}>
-                          {c.label}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-between w-full gap-2">
+                                  <span>{c.label}</span>
+                                  <Info className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600 flex-shrink-0" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-sm">
+                                <p className="text-xs">{c.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </SelectItem>
                       ))}
                     </SelectContent>
