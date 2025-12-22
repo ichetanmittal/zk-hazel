@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { DEAL_STEPS } from '@/lib/utils/constants'
 
 export async function POST(request: Request) {
@@ -122,7 +123,160 @@ export async function POST(request: Request) {
 
     const createdDocument: any = document
 
+    // PARTY APPROVAL TRACKING: Track this party's approval for the step IMMEDIATELY
+    // This happens before ZK verification so the UI updates right away
+    console.log(`📤 Upload params: stepNumber=${stepNumber}, folder=${folder}, userRole=${userRole}, dealId=${dealId}`)
+
+    if (stepNumber && parseInt(stepNumber) > 0) {
+      const currentStepNumber = parseInt(stepNumber)
+      console.log(`🔍 Processing step approval for step ${currentStepNumber}`)
+
+      // Use service client for party approval operations (bypasses RLS)
+      const serviceSupabase = createServiceClient()
+
+      // Get deal to check current_step
+      const { data: deal } = await serviceSupabase
+          .from('deals')
+          .select('current_step, status')
+          .eq('id', dealId)
+          .single()
+
+      console.log(`📊 Deal state: current_step=${deal?.current_step}, status=${deal?.status}`)
+
+      // Only process if this is the current step
+      if (deal && deal.current_step === currentStepNumber) {
+        console.log(`✓ Marking ${userRole} approval for Step ${currentStepNumber}`)
+
+        // Create or update party approval record (using service client to bypass RLS)
+        const { data: approvalData, error: approvalError } = await serviceSupabase
+          .from('step_party_approvals')
+          .upsert({
+            deal_id: dealId,
+            step_number: currentStepNumber,
+            party_role: userRole,
+            user_id: user.id,
+            approved: true,
+            approved_at: new Date().toISOString(),
+            document_id: createdDocument.id,
+          }, {
+            onConflict: 'deal_id,step_number,party_role'
+          })
+
+        if (approvalError) {
+          console.error(`❌ Failed to create party approval:`, approvalError)
+        } else {
+          console.log(`✅ Party approval saved successfully:`, approvalData)
+        }
+
+        // Check if ALL required parties have now approved
+        const { data: allApprovedResult } = await serviceSupabase
+            .rpc('check_step_all_parties_approved', {
+              p_deal_id: dealId,
+              p_step_number: currentStepNumber,
+            })
+
+        const allPartiesApproved = allApprovedResult
+
+        if (allPartiesApproved) {
+          console.log(`✓ All parties approved! Auto-completing Step ${currentStepNumber}`)
+
+          // Mark current step as completed
+          await serviceSupabase
+            .from('deal_steps')
+            .update({
+              status: 'COMPLETED',
+              completed_at: new Date().toISOString(),
+              completed_by: user.id,
+            })
+            .eq('deal_id', dealId)
+            .eq('step_number', currentStepNumber)
+
+          // Advance to next step
+          const newStep = Math.min(currentStepNumber + 1, 12)
+
+          // If we just completed step 12, mark deal as COMPLETED
+          const dealStatus = currentStepNumber === 12 ? 'COMPLETED' : 'IN_PROGRESS'
+
+          await serviceSupabase
+            .from('deals')
+            .update({
+              current_step: newStep,
+              status: dealStatus,
+            })
+            .eq('id', dealId)
+
+          // Mark next step as IN_PROGRESS (only if we haven't completed the last step)
+          if (currentStepNumber < 12) {
+            await serviceSupabase
+              .from('deal_steps')
+              .update({
+                status: 'IN_PROGRESS',
+                started_at: new Date().toISOString(),
+              })
+              .eq('deal_id', dealId)
+              .eq('step_number', newStep)
+
+            // Initialize party approvals for the next step
+            const nextStepInfo = DEAL_STEPS.find((s) => s.number === newStep)
+            if (nextStepInfo && nextStepInfo.requiredParties) {
+              await serviceSupabase.rpc('initialize_step_party_approvals', {
+                p_deal_id: dealId,
+                p_step_number: newStep,
+                p_required_parties: nextStepInfo.requiredParties,
+              })
+            }
+          }
+
+          console.log(`✓ Advanced to Step ${newStep}`)
+        } else {
+          console.log(`✓ ${userRole} approved. Waiting for other parties...`)
+        }
+
+        // Create step completion notification only if all parties approved
+        if (allPartiesApproved) {
+          const { data: dealData } = await serviceSupabase
+            .from('deals')
+            .select(`
+              *,
+              buyer:companies!buyer_id(id),
+              seller:companies!seller_id(id)
+            `)
+            .eq('id', dealId)
+            .single()
+
+          if (dealData) {
+            // Get all users associated with this deal
+            const { data: users } = await serviceSupabase
+              .from('users')
+              .select('id')
+              .or(
+                `company_id.eq.${dealData.buyer?.id},company_id.eq.${dealData.seller?.id},id.eq.${dealData.broker_id}`
+              )
+
+            if (users) {
+              const notifications = users.map((u: any) => ({
+                user_id: u.id,
+                deal_id: dealId,
+                type: 'STEP_COMPLETED',
+                title: `Step ${currentStepNumber} Completed`,
+                message: `Step ${currentStepNumber} has been automatically completed after document upload.`,
+                action_url: `/dashboard/deals/${dealId}`,
+                read: false,
+              }))
+
+              await serviceSupabase.from('notifications').insert(notifications)
+            }
+          }
+        }
+      } else {
+        console.log(`⚠️ Skipping party approval: deal.current_step (${deal?.current_step}) !== stepNumber (${currentStepNumber})`)
+      }
+    } else {
+      console.log(`⚠️ Skipping party approval: stepNumber=${stepNumber} (must be > 0)`)
+    }
+
     // Simulate ZK verification (in production, this would be done by a background job)
+    // This runs in the background after the approval logic completes
     setTimeout(async () => {
       const supabaseClient = await createClient()
       await (supabaseClient as any)
@@ -142,138 +296,7 @@ export async function POST(request: Request) {
         console.log(`✓ Set ${verificationField} = true for deal ${dealId}`)
       }
 
-      // PARTY APPROVAL TRACKING: Track this party's approval for the step
-      if (stepNumber && parseInt(stepNumber) > 0) {
-        const currentStepNumber = parseInt(stepNumber)
-
-        // Get deal to check current_step
-        const { data: deal } = await (supabaseClient as any)
-          .from('deals')
-          .select('current_step, status')
-          .eq('id', dealId)
-          .single()
-
-        // Only process if this is the current step
-        if (deal && deal.current_step === currentStepNumber) {
-          console.log(`✓ Marking ${userRole} approval for Step ${currentStepNumber}`)
-
-          // Create or update party approval record
-          await (supabaseClient as any)
-            .from('step_party_approvals')
-            .upsert({
-              deal_id: dealId,
-              step_number: currentStepNumber,
-              party_role: userRole,
-              user_id: user.id,
-              approved: true,
-              approved_at: new Date().toISOString(),
-              document_id: createdDocument.id,
-            }, {
-              onConflict: 'deal_id,step_number,party_role'
-            })
-
-          // Check if ALL required parties have now approved
-          const { data: allApprovedResult } = await (supabaseClient as any)
-            .rpc('check_step_all_parties_approved', {
-              p_deal_id: dealId,
-              p_step_number: currentStepNumber,
-            })
-
-          const allPartiesApproved = allApprovedResult
-
-          if (allPartiesApproved) {
-            console.log(`✓ All parties approved! Auto-completing Step ${currentStepNumber}`)
-
-            // Mark current step as completed
-            await (supabaseClient as any)
-              .from('deal_steps')
-              .update({
-                status: 'COMPLETED',
-                completed_at: new Date().toISOString(),
-                completed_by: user.id,
-              })
-              .eq('deal_id', dealId)
-              .eq('step_number', currentStepNumber)
-
-            // Advance to next step
-            const newStep = Math.min(currentStepNumber + 1, 12)
-
-            // If we just completed step 12, mark deal as COMPLETED
-            const dealStatus = currentStepNumber === 12 ? 'COMPLETED' : 'IN_PROGRESS'
-
-            await (supabaseClient as any)
-              .from('deals')
-              .update({
-                current_step: newStep,
-                status: dealStatus,
-              })
-              .eq('id', dealId)
-
-            // Mark next step as IN_PROGRESS (only if we haven't completed the last step)
-            if (currentStepNumber < 12) {
-              await (supabaseClient as any)
-                .from('deal_steps')
-                .update({
-                  status: 'IN_PROGRESS',
-                  started_at: new Date().toISOString(),
-                })
-                .eq('deal_id', dealId)
-                .eq('step_number', newStep)
-
-              // Initialize party approvals for the next step
-              const nextStepInfo = DEAL_STEPS.find((s) => s.number === newStep)
-              if (nextStepInfo && nextStepInfo.requiredParties) {
-                await (supabaseClient as any).rpc('initialize_step_party_approvals', {
-                  p_deal_id: dealId,
-                  p_step_number: newStep,
-                  p_required_parties: nextStepInfo.requiredParties,
-                })
-              }
-            }
-
-            console.log(`✓ Advanced to Step ${newStep}`)
-          } else {
-            console.log(`✓ ${userRole} approved. Waiting for other parties...`)
-          }
-
-          // Create step completion notification
-          const { data: dealData } = await (supabaseClient as any)
-            .from('deals')
-            .select(`
-              *,
-              buyer:companies!buyer_id(id),
-              seller:companies!seller_id(id)
-            `)
-            .eq('id', dealId)
-            .single()
-
-          if (dealData) {
-            // Get all users associated with this deal
-            const { data: users } = await (supabaseClient as any)
-              .from('users')
-              .select('id')
-              .or(
-                `company_id.eq.${dealData.buyer?.id},company_id.eq.${dealData.seller?.id},id.eq.${dealData.broker_id}`
-              )
-
-            if (users) {
-              const notifications = users.map((u: any) => ({
-                user_id: u.id,
-                deal_id: dealId,
-                type: 'STEP_COMPLETED',
-                title: `Step ${currentStepNumber} Completed`,
-                message: `Step ${currentStepNumber} has been automatically completed after document upload.`,
-                action_url: `/dashboard/deals/${dealId}`,
-                read: false,
-              }))
-
-              await (supabaseClient as any).from('notifications').insert(notifications)
-            }
-          }
-        }
-      }
-
-      // Create notification
+      // Create notification about document verification
       await (supabaseClient as any).from('notifications').insert({
         user_id: user.id,
         deal_id: dealId,
