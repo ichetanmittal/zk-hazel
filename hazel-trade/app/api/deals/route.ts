@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { DEAL_STEPS } from '@/lib/utils/constants'
 import { sendInviteEmail } from '@/lib/email/send'
 
@@ -84,7 +85,10 @@ export async function POST(request: Request) {
 
     // If both buyer and seller are existing, activate Step 1 immediately
     if (buyerType === 'existing' && sellerType === 'existing') {
-      await (supabase as any)
+      // Use service client to bypass RLS for admin operations
+      const serviceSupabase = createServiceClient()
+
+      await serviceSupabase
         .from('deal_steps')
         .update({
           status: 'IN_PROGRESS',
@@ -93,14 +97,20 @@ export async function POST(request: Request) {
         .eq('deal_id', createdDeal.id)
         .eq('step_number', 1)
 
-      // Initialize party approvals for Step 1
+      // Initialize party approvals for Step 1 (using service client to bypass RLS)
       const step1Info = DEAL_STEPS.find((s) => s.number === 1)
       if (step1Info && step1Info.requiredParties) {
-        await (supabase as any).rpc('initialize_step_party_approvals', {
+        const { error: initError } = await serviceSupabase.rpc('initialize_step_party_approvals', {
           p_deal_id: createdDeal.id,
           p_step_number: 1,
           p_required_parties: step1Info.requiredParties,
         })
+
+        if (initError) {
+          console.error('❌ Failed to initialize Step 1 party approvals:', initError)
+        } else {
+          console.log(`✅ Initialized party approvals for Step 1: ${step1Info.requiredParties.join(', ')}`)
+        }
       }
     }
 
